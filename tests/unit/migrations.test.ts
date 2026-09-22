@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS } from "../../src/shared/constants";
-import { migrateStoredSchema } from "../../src/storage/migrations";
+import { migrateStoredSchema, validateImportedConfiguration } from "../../src/storage/migrations";
 
 describe("storage migrations", () => {
   it("normalizes an empty or old root into the current schema", () => {
@@ -46,5 +46,18 @@ describe("storage migrations", () => {
     const invalid = { ...baseRule, id: "broken_gmail", gmailTarget: { threadId: "thread_alpha1" } };
 
     expect(migrateStoredSchema({ rules: [valid, invalid] }).rules).toEqual([valid]);
+  });
+
+  it("rejects an import envelope when any rule is malformed", () => {
+    const configuration = {
+      schemaVersion: 1,
+      settings: DEFAULT_SETTINGS,
+      rules: [
+        { id: "valid", schemaVersion: 1, enabled: true, createdAt: 1, updatedAt: 1, scope: { kind: "origin", origin: "https://example.com" }, locator: {}, style: {} },
+        { id: "invalid" },
+      ],
+    };
+
+    expect(validateImportedConfiguration(configuration)).toBeNull();
   });
 });

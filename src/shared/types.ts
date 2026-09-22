@@ -137,3 +137,10 @@ export interface PageStatus {
   unresolvedRules: number;
   adapterId?: string;
 }
+
+export interface RuleTestResult {
+  resolved: boolean;
+  targetCount: number;
+}
+
+export type PageRuleAction = "disable-page" | "disable-site" | "remove-page";

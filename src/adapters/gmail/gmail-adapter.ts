@@ -1,7 +1,7 @@
 import type { AdapterResolution, ElementLocator, GmailMaskTarget, MaskRule, SiteAdapter, SiteLocation } from "../../shared/types";
 import { resolveLocator } from "../../content/locator/locator-engine";
 import { generateLocator } from "../../content/locator/selector-generator";
-import { gmailThreadId } from "./gmail-identifiers";
+import { gmailMessageId, gmailThreadId } from "./gmail-identifiers";
 import { resolveListSurfaces } from "./gmail-list-resolver";
 import { hasMessageIdentity, resolveMessageSurfaces } from "./gmail-message-resolver";
 import { isProtectedGmailThreadRoute, parseGmailRoute } from "./gmail-route";
@@ -52,6 +52,11 @@ export class GmailAdapter implements SiteAdapter {
   currentRouteId(href: string = window.location.href): string | undefined {
     const route = parseGmailRoute(href);
     return route.kind === "thread" ? route.threadId : undefined;
+  }
+
+  messageIdForElement(element: Element): string | undefined {
+    const messageRoot = element.closest(GMAIL_SELECTORS.messageRoot);
+    return messageRoot ? gmailMessageId(messageRoot) ?? undefined : undefined;
   }
 }
 

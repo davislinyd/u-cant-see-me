@@ -253,6 +253,38 @@ test("protects synthetic Gmail surfaces through reload, route changes, replaceme
   }
 });
 
+test("manages rules and persistent page protection from the options UI", async ({ baseURL }) => {
+  const extensionPath = await createE2eExtension();
+  const context = await chromium.launchPersistentContext("", {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+  try {
+    const page = await context.newPage();
+    await page.goto(`${baseURL}/basic.html`);
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker", { timeout: 10_000 });
+    const tabId = await worker.evaluate(async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id);
+    expect(tabId).toBeDefined();
+    await selectAndSave(page, worker, tabId as number, ["#private-card"], "black", false, 1);
+
+    const extensionId = new URL(worker.url()).host;
+    const options = await context.newPage();
+    await options.goto(`chrome-extension://${extensionId}/options.html`);
+    await expect(options.locator("#rule-count")).toHaveText("1");
+    await options.getByRole("checkbox", { name: "Enabled" }).uncheck();
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(0);
+
+    await options.getByRole("button", { name: "Duplicate" }).click();
+    await expect(options.locator("#rule-count")).toHaveText("2");
+    await options.getByRole("button", { name: "Delete" }).first().click();
+    await expect(options.locator("#rule-count")).toHaveText("1");
+  } finally {
+    await context.close();
+    await rm(extensionPath, { recursive: true, force: true });
+  }
+});
+
 async function createE2eExtension(): Promise<string> {
   const sourcePath = resolve(process.cwd(), "dist");
   const extensionPath = await mkdtemp(resolve(tmpdir(), "u-cant-see-me-e2e-"));

@@ -22,6 +22,20 @@
     "default_title": "U Cant See Me",
     "default_popup": "popup.html"
   },
+  "commands": {
+    "start-selection": {
+      "suggested_key": { "default": "Alt+Shift+S" },
+      "description": "Start U Cant See Me element selection"
+    },
+    "temporary-reveal": {
+      "suggested_key": { "default": "Alt+Shift+V" },
+      "description": "Temporarily reveal masks"
+    },
+    "remask-all": {
+      "suggested_key": { "default": "Alt+Shift+L" },
+      "description": "Immediately remask all content"
+    }
+  },
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true

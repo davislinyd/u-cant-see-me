@@ -17,6 +17,8 @@ The extension has four runtime surfaces:
 
 `src/shared/messages.ts` is the single definition point for extension messages. Runtime validation rejects unknown message types and malformed identifiers before a message reaches a handler. New flows should extend this union rather than passing ad-hoc strings between surfaces.
 
+Phase 5 adds typed management messages for locator testing, current page/site rule changes, context-target actions, edit mode, and tab badge updates. Options-page mutations go through the service worker so rules are persisted, dynamic scripts are registered only for already-granted host origins, and content scripts are notified. The badge combines a short textual state (`OK`, `!`, `ERR`, or `—`) with color; popup status remains the accessible full label.
+
 ## Site adapters
 
 `SiteAdapter` separates site-specific matching and resolution from the generic engine. `GenericAdapter` delegates to the structural locator engine. `GmailAdapter` resolves a rule into one or more page elements, allowing conversation subjects, selected message bodies, collapsed previews, and list/search surfaces to be masked without Gmail selectors entering the generic engine. Its versioned rendered-DOM selector profile, ID readers, route parser, thread/message/list resolvers, and fail-closed guard all live under `src/adapters/gmail/`.
@@ -56,3 +58,9 @@ Temporary reveal state stays in content-script runtime memory and never mutates 
 ## Security model
 
 The extension uses a restrictive MV3 extension-page CSP, no `eval`, no remote scripts, no backend, no analytics, and no Gmail API. Optional host permissions are requested per origin. Imported configuration must be schema-validated and treated as data. Generic Phase 1 access remains subject to browser-restricted pages, cross-origin iframe boundaries, and closed shadow roots. Masking is visual and reversible; it is not encryption, DRM, or enterprise DLP.
+
+## Management UX
+
+The Options page deliberately renders only rule metadata: ID, adapter, scope, enabled state, style, and a user-triggered result from the most recently usable web tab. It never reads visible page text to label a rule. JSON export includes `{ schemaVersion, rules, settings }`; temporary reveal state is runtime-only and omitted. Import accepts a complete JSON data envelope only when every rule passes schema validation, then re-registers content scripts only where the browser has already granted host access.
+
+Context-menu actions rely on an already-running content script to retain the locally clicked DOM node. They therefore operate only on origins where extension access has been granted; otherwise **Mask this element** falls back to selection mode. Rule edit mode creates extension-owned, pointer-transparent boundaries only while active and removes them on Done/Escape.

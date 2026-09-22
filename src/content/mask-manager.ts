@@ -1,5 +1,5 @@
 import type { SiteAdapter } from "../shared/types";
-import type { ActiveMask, MaskRule, PageStatus } from "../shared/types";
+import type { ActiveMask, MaskRule, PageStatus, RuleTestResult } from "../shared/types";
 import { matchesSiteScope } from "../shared/utils";
 import { developmentMetrics } from "./development-metrics";
 import { applyWithRendererChain, createRendererChain, type RendererHandle } from "./renderer/renderer";
@@ -104,6 +104,17 @@ export class MaskManager {
 
   applicableRulesForPage(href: string): MaskRule[] {
     return this.applicableRules(href);
+  }
+
+  testRule(rule: MaskRule, root: ParentNode = document): RuleTestResult {
+    const resolution = this.adapter.resolve(rule, root);
+    return { resolved: resolution.complete, targetCount: resolution.elements.length };
+  }
+
+  ruleIdsForNode(node: Node): string[] {
+    return this.getActiveMasks()
+      .filter(({ element }) => element === node || element.contains(node))
+      .map(({ ruleId }) => ruleId);
   }
 
   private resolveRule(rule: MaskRule, roots: ParentNode[]): boolean {

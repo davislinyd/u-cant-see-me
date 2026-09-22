@@ -24,6 +24,15 @@ export function migrateStoredSchema(input: unknown): StoredSchema {
   };
 }
 
+/** Imported data is data only: malformed envelopes are rejected as a whole. */
+export function validateImportedConfiguration(input: unknown): StoredSchema | null {
+  if (!isRecord(input) || typeof input.schemaVersion !== "number" || !Array.isArray(input.rules) || !isRecord(input.settings)) {
+    return null;
+  }
+  const migrated = migrateStoredSchema(input);
+  return migrated.rules.length === input.rules.length ? migrated : null;
+}
+
 export function migrateRulesEnvelope(input: unknown): StoredRulesEnvelope {
   const record = isRecord(input) ? input : {};
   return {

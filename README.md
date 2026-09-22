@@ -2,7 +2,7 @@
 
 U Cant See Me is a Manifest V3 Chromium extension for local visual privacy protection. It is designed for Chrome, Brave, and Microsoft Edge and does not send browsing data to a backend.
 
-The repository implements the Phase 4 privacy-critical masking flow from `Plan.md`: typed storage and messaging contracts, generic selection, persistent rules with SPA recovery, document-start Privacy Gate protection, temporary reveal, relock controls, print concealment, and Gmail-specific per-message masking.
+The repository implements the Phase 5 privacy-critical masking flow from `Plan.md`: typed storage and messaging contracts, generic selection, persistent rules with SPA recovery, document-start Privacy Gate protection, temporary reveal, relock controls, print concealment, Gmail-specific per-message masking, and user-facing rule management.
 
 ## Development
 
@@ -32,6 +32,8 @@ Temporary reveal is runtime-only and supports 5, 10, 30, or 60 seconds. It is re
 
 On Gmail, the popup offers a local **Protect this email** action. It derives only the rendered thread ID and can mask the conversation subject, message bodies, collapsed previews, and matching inbox/search subjects and snippets. A rule can additionally include a message ID, so sibling message bodies remain visible. Gmail selectors, route parsing, resolvers, and the Gmail-only fail-closed guard are isolated under `src/adapters/gmail/`. If a protected Gmail route cannot be structurally verified, the guard remains visible with Retry and a runtime-only temporary-reveal option; it never silently falls back to plaintext.
 
+The Options page supports safe rule filtering, enable/disable, style and scope editing, duplication, deletion, current-page locator testing, and JSON import/export. Exports include only settings and rule metadata; imports are schema-validated as data and never execute selectors or configuration. The popup can temporarily reveal, open edit mode, disable rules for the current page/site, or remove page rules. Chromium commands use Alt+Shift+S (selection), Alt+Shift+V (temporary reveal), and Alt+Shift+L (remask); holding Alt+Shift+H reveals only while held. Command shortcuts can be changed in Chromium's extension shortcut UI.
+
 ## Scope and roadmap
 
 - Phase 0: architecture and build foundation — implemented.
@@ -39,4 +41,5 @@ On Gmail, the popup offers a local **Protect this email** action. It derives onl
 - Phase 2: resilient locator recovery and SPA support — implemented.
 - Phase 3: privacy gate, anti-flash protection, and temporary reveal — implemented.
 - Phase 4: Gmail adapter and per-message privacy protection — implemented.
-- Phase 5+: management UX and release hardening — tracked in `Plan.md`.
+- Phase 5: management UX, keyboard shortcuts, context menu, and advanced controls — implemented.
+- Phase 6+: release hardening — tracked in `Plan.md`.

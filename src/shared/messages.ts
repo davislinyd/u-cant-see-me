@@ -1,5 +1,5 @@
 import { MESSAGE_TYPES } from "./constants";
-import type { GmailMaskTarget, MaskRule, MaskStyle, PageStatus, TemporaryRevealState } from "./types";
+import type { GmailMaskTarget, MaskRule, MaskStyle, PageRuleAction, PageStatus, RuleTestResult, TemporaryRevealState } from "./types";
 import { isRecord } from "./utils";
 
 export type ExtensionMessage =
@@ -15,7 +15,16 @@ export type ExtensionMessage =
   | { type: "RELOCK_ALL" }
   | { type: "RULES_CHANGED" }
   | { type: "GET_PAGE_STATUS" }
-  | { type: "CREATE_GMAIL_RULE"; target: GmailRuleOptions; style: MaskStyle; tabId?: number };
+  | { type: "CREATE_GMAIL_RULE"; target: GmailRuleOptions; style: MaskStyle; tabId?: number }
+  | { type: "TEST_RULE"; rule: MaskRule; tabId?: number }
+  | { type: "MANAGE_PAGE_RULES"; action: PageRuleAction; tabId?: number }
+  | { type: "MASK_CONTEXT_ELEMENT"; tabId?: number }
+  | { type: "REVEAL_CONTEXT_ELEMENT"; tabId?: number }
+  | { type: "REMOVE_CONTEXT_MASK"; tabId?: number }
+  | { type: "PROTECT_GMAIL_CONTEXT_MESSAGE"; tabId?: number }
+  | { type: "START_EDIT_MODE"; tabId?: number }
+  | { type: "STOP_EDIT_MODE"; tabId?: number }
+  | { type: "UPDATE_BADGE"; status: PageStatus };
 
 export type GmailRuleOptions = Omit<GmailMaskTarget, "threadId" | "messageId">;
 
@@ -24,6 +33,7 @@ export type MessageData =
   | boolean
   | MaskRule[]
   | PageStatus
+  | RuleTestResult
   | TemporaryRevealState;
 
 export type MessageResponse =
@@ -46,6 +56,12 @@ export function isExtensionMessage(value: unknown): value is ExtensionMessage {
     case "RULES_CHANGED":
     case "GET_PAGE_STATUS":
     case "RELOCK_ALL":
+    case "MASK_CONTEXT_ELEMENT":
+    case "REVEAL_CONTEXT_ELEMENT":
+    case "REMOVE_CONTEXT_MASK":
+    case "PROTECT_GMAIL_CONTEXT_MESSAGE":
+    case "START_EDIT_MODE":
+    case "STOP_EDIT_MODE":
       return value.type !== "START_SELECTION" || value.tabId === undefined || typeof value.tabId === "number";
     case "REMOVE_RULE":
       return typeof value.ruleId === "string";
@@ -65,6 +81,14 @@ export function isExtensionMessage(value: unknown): value is ExtensionMessage {
     case "CREATE_GMAIL_RULE":
       return isGmailRuleOptions(value.target) && isRecord(value.style) &&
         typeof value.style.type === "string" && (value.tabId === undefined || typeof value.tabId === "number");
+    case "TEST_RULE":
+      return isRecord(value.rule) && typeof value.rule.id === "string" &&
+        (value.tabId === undefined || typeof value.tabId === "number");
+    case "MANAGE_PAGE_RULES":
+      return (value.action === "disable-page" || value.action === "disable-site" || value.action === "remove-page") &&
+        (value.tabId === undefined || typeof value.tabId === "number");
+    case "UPDATE_BADGE":
+      return isRecord(value.status) && typeof value.status.state === "string";
   }
 
   return false;

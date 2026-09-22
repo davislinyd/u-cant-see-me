@@ -24,6 +24,7 @@
       </section>
 
       <button id="select-elements" class="primary-button" type="button">Select elements</button>
+      <button id="edit-masks" class="secondary-button" type="button">Edit masks</button>
       <section id="gmail-protection" class="gmail-protection" hidden>
         <h2>Protect this email</h2>
         <label><input id="gmail-thread-subject" type="checkbox" checked /> Conversation subject</label>
@@ -43,6 +44,13 @@
       </section>
       <button id="reveal-all" class="secondary-button" type="button" disabled>Temporarily reveal all</button>
 
+      <section class="page-actions" aria-label="Current page management">
+        <p>Current site</p>
+        <button id="disable-page" class="link-button" type="button">Disable masks for this page</button>
+        <button id="disable-site" class="link-button" type="button">Disable protection for this site</button>
+        <button id="remove-page" class="link-button danger-link" type="button">Remove all masks on this page</button>
+      </section>
+
       <div class="divider"></div>
 
       <div class="page-count">
@@ -50,6 +58,7 @@
         <strong id="mask-count">0</strong>
       </div>
       <button id="manage-masks" class="link-button" type="button">Manage masks</button>
+      <button id="open-settings" class="link-button" type="button">Settings</button>
       <p id="feedback" class="feedback" role="status"></p>
     </main>
     <script type="module" src="./popup.ts"></script>

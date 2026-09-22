@@ -16,6 +16,8 @@ import { RouteObserver } from "./route-observer";
 import { SelectionController } from "./selection-controller";
 import { StrictMaskController } from "./strict-mask-controller";
 import { TemporaryRevealController } from "./temporary-reveal-controller";
+import { HoldToRevealController } from "./hold-to-reveal-controller";
+import { RuleEditController } from "./rule-edit-controller";
 
 const adapter = getSiteAdapter(window.location.href, document);
 const maskManager = new MaskManager(adapter);
@@ -32,6 +34,16 @@ const temporaryRevealController = new TemporaryRevealController(
 );
 const printProtectionController = new PrintProtectionController(() => maskManager.getActiveMasks());
 const strictMaskController = new StrictMaskController(() => maskManager.getActiveMasks());
+const holdToRevealController = new HoldToRevealController(
+  () => temporaryRevealController.revealAll(60_000),
+  () => temporaryRevealController.remaskAll(),
+);
+const ruleEditController = new RuleEditController(
+  () => maskManager.getActiveMasks(),
+  async (ruleId, style) => updateStoredRule(ruleId, { style }),
+  async (ruleId) => updateStoredRule(ruleId, { enabled: false }),
+  async (ruleId) => removeStoredRule(ruleId),
+);
 const selectionController = new SelectionController(
   async (elements, style) => saveSelectedElements(elements, style),
   () => undefined,
@@ -39,6 +51,7 @@ const selectionController = new SelectionController(
 let defaultMaskStyle: MaskStyle = { ...DEFAULT_SETTINGS.defaultMaskStyle };
 let currentSettings = { ...DEFAULT_SETTINGS, defaultMaskStyle: { ...DEFAULT_SETTINGS.defaultMaskStyle } };
 let rulesReady = false;
+let contextTarget: Element | null = null;
 const gmailGuard = adapter instanceof GmailAdapter
   ? new GmailPrivacyGuard(
     () => void currentStatus(),
@@ -121,12 +134,28 @@ async function handleMessage(message: ExtensionMessage): Promise<MessageResponse
       return { ok: true };
     case "CREATE_GMAIL_RULE":
       return saveGmailRule(message.target, message.style);
+    case "TEST_RULE":
+      return { ok: true, data: maskManager.testRule(message.rule) };
+    case "MASK_CONTEXT_ELEMENT":
+      return maskContextElement();
+    case "REVEAL_CONTEXT_ELEMENT":
+      return revealContextElement();
+    case "REMOVE_CONTEXT_MASK":
+      return removeContextMasks();
+    case "PROTECT_GMAIL_CONTEXT_MESSAGE":
+      return protectGmailContextMessage();
+    case "START_EDIT_MODE":
+      ruleEditController.start();
+      return { ok: true, data: true };
+    case "STOP_EDIT_MODE":
+      ruleEditController.stop();
+      return { ok: true, data: true };
     default:
       return { ok: true };
   }
 }
 
-async function saveGmailRule(options: GmailRuleOptions, style: MaskStyle): Promise<MessageResponse> {
+async function saveGmailRule(options: GmailRuleOptions, style: MaskStyle, messageId?: string): Promise<MessageResponse> {
   if (!(adapter instanceof GmailAdapter)) {
     return { ok: false, error: "This action is available only on Gmail." };
   }
@@ -147,6 +176,7 @@ async function saveGmailRule(options: GmailRuleOptions, style: MaskStyle): Promi
     gmailTarget: {
       threadId,
       ...withRouteId(adapter.currentRouteId()),
+      ...(messageId ? { messageId } : {}),
       ...options,
     },
   };
@@ -155,6 +185,76 @@ async function saveGmailRule(options: GmailRuleOptions, style: MaskStyle): Promi
     await refreshRules();
   }
   return response;
+}
+
+async function maskContextElement(): Promise<MessageResponse> {
+  if (!contextTarget?.isConnected) {
+    return { ok: false, error: "Choose an element on the page first." };
+  }
+  try {
+    await saveSelectedElements([contextTarget], defaultMaskStyle);
+    return { ok: true, data: true };
+  } catch {
+    return { ok: false, error: "Unable to save a mask for this element." };
+  }
+}
+
+function revealContextElement(): MessageResponse {
+  if (!contextTarget) {
+    return { ok: false, error: "Choose an element on the page first." };
+  }
+  const ruleIds = maskManager.ruleIdsForNode(contextTarget);
+  if (ruleIds.length === 0) {
+    return { ok: false, error: "This element has no active mask." };
+  }
+  temporaryRevealController.reveal(ruleIds, 10_000);
+  return { ok: true, data: true };
+}
+
+async function removeContextMasks(): Promise<MessageResponse> {
+  if (!contextTarget) {
+    return { ok: false, error: "Choose an element on the page first." };
+  }
+  const ruleIds = maskManager.ruleIdsForNode(contextTarget);
+  if (ruleIds.length === 0) {
+    return { ok: false, error: "This element has no active mask." };
+  }
+  for (const ruleId of ruleIds) {
+    const response = await chrome.runtime.sendMessage({ type: "REMOVE_RULE", ruleId } satisfies ExtensionMessage) as MessageResponse;
+    if (!response.ok) {
+      return response;
+    }
+  }
+  await refreshRules();
+  return { ok: true, data: true };
+}
+
+function protectGmailContextMessage(): Promise<MessageResponse> {
+  const messageId = contextTarget && adapter instanceof GmailAdapter ? adapter.messageIdForElement(contextTarget) : undefined;
+  return saveGmailRule({
+    maskThreadSubject: true,
+    maskMessageBody: true,
+    maskCollapsedPreview: true,
+    maskListSubject: true,
+    maskListSnippet: true,
+  }, defaultMaskStyle, messageId);
+}
+
+async function updateStoredRule(ruleId: string, patch: Pick<MaskRule, "style"> | Pick<MaskRule, "enabled">): Promise<void> {
+  const rule = (await ruleStore.list()).find((candidate) => candidate.id === ruleId);
+  if (!rule) return;
+  const response = await chrome.runtime.sendMessage({
+    type: "SAVE_RULE",
+    rule: { ...rule, ...patch, updatedAt: Date.now() },
+  } satisfies ExtensionMessage) as MessageResponse;
+  if (!response.ok) throw new Error(response.error);
+  await refreshRules();
+}
+
+async function removeStoredRule(ruleId: string): Promise<void> {
+  const response = await chrome.runtime.sendMessage({ type: "REMOVE_RULE", ruleId } satisfies ExtensionMessage) as MessageResponse;
+  if (!response.ok) throw new Error(response.error);
+  await refreshRules();
 }
 
 function withRouteId(routeId: string | undefined): Pick<NonNullable<MaskRule["gmailTarget"]>, "routeId"> | Record<never, never> {
@@ -173,6 +273,7 @@ function initialize(): void {
   temporaryRevealController.start();
   printProtectionController.start();
   strictMaskController.start();
+  holdToRevealController.start();
   routeObserver.start();
   routeObserver.subscribe(() => {
     temporaryRevealController.handleNavigation();
@@ -180,6 +281,9 @@ function initialize(): void {
     void refreshRules();
   });
   mutationEngine.start();
+  document.addEventListener("contextmenu", (event) => {
+    contextTarget = event.target instanceof Element ? event.target : null;
+  }, true);
 
   chrome.runtime.onMessage.addListener((rawMessage, _sender, sendResponse) => {
     if (!isExtensionMessage(rawMessage)) {
@@ -209,6 +313,7 @@ function finalizeStatus(status: PageStatus): PageStatus {
   if (rulesReady) {
     privacyGate.reconcile(status);
     reconcileGmailGuard();
+    void chrome.runtime.sendMessage({ type: "UPDATE_BADGE", status } satisfies ExtensionMessage).catch(() => undefined);
   }
   return status;
 }

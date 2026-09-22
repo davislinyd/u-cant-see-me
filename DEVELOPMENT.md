@@ -32,3 +32,7 @@ The E2E fixtures are synthetic. `basic.html` covers generic selection; `spa.html
 ## Gmail validation boundary
 
 Gmail support is tested only against synthetic rendered-DOM fixtures. It does not use Gmail API/OAuth, Gmail.js, real mailbox content, or remote services. Gmail's DOM is an implementation detail: when an expected protected thread cannot be structurally resolved, the adapter deliberately keeps its Gmail-only guard visible rather than allowing an unverified plaintext fallback. The generic adapter intentionally does not recover across cross-origin frames or closed shadow roots. Privacy Gate timing is best-effort within Chromium document-start limits and must not be described as a proof of zero-frame secrecy.
+
+## Phase 5 management checks
+
+The Options UI test creates a synthetic rule, disables it, duplicates it, and deletes it while confirming the active content-script mask changes accordingly. Locator testing is explicit and targets the most recently used http(s) tab, so it never treats an extension page as a page target. JSON import is unit-tested to reject an envelope if any rule is malformed. Context-menu actions require a running content script to know the locally clicked node; use normal selection on a first-time origin. No test or manual workflow should use a real Gmail account.

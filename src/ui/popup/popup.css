@@ -141,6 +141,26 @@ button:disabled {
   margin: 18px 0 14px;
 }
 
+.page-actions {
+  border: 1px solid #e2e5ef;
+  border-radius: 10px;
+  margin-top: 12px;
+  padding: 10px;
+}
+
+.page-actions p {
+  color: #636b85;
+  font-size: 12px;
+  margin: 0 0 4px;
+}
+
+.page-actions .link-button {
+  margin-top: 2px;
+  text-align: left;
+}
+
+.danger-link { color: #aa2020; }
+
 .page-count {
   color: #636b85;
   font-size: 12px;

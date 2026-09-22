@@ -12,6 +12,8 @@ const revealButton = document.querySelector<HTMLButtonElement>("#reveal-all");
 const manageButton = document.querySelector<HTMLButtonElement>("#manage-masks");
 const gmailProtection = document.querySelector<HTMLElement>("#gmail-protection");
 const protectGmailButton = document.querySelector<HTMLButtonElement>("#protect-gmail");
+const editButton = document.querySelector<HTMLButtonElement>("#edit-masks");
+const settingsButton = document.querySelector<HTMLButtonElement>("#open-settings");
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -35,7 +37,7 @@ async function loadStatus(): Promise<void> {
   try {
     const response = await chrome.tabs.sendMessage(tab.id, { type: "GET_PAGE_STATUS" } satisfies ExtensionMessage) as MessageResponse;
     if (response.ok && response.data && typeof response.data === "object" && "state" in response.data) {
-      updateStatus(response.data.state, `Active masks: ${response.data.activeMasks}`, response.data.activeMasks);
+      updateStatus(response.data.state, `Active masks: ${response.data.activeMasks} · Unresolved: ${response.data.unresolvedRules}`, response.data.activeMasks);
       return;
     }
   } catch {
@@ -47,7 +49,7 @@ async function loadStatus(): Promise<void> {
 
 function updateStatus(state: string, detail: string, count: number): void {
   if (stateElement) {
-    stateElement.textContent = state;
+    stateElement.textContent = humanizeState(state);
   }
   if (detailElement) {
     detailElement.textContent = detail;
@@ -84,6 +86,23 @@ selectButton?.addEventListener("click", async () => {
     ? "Selection mode started."
     : "Selection mode started; automatic restore needs site access.");
 });
+
+editButton?.addEventListener("click", async () => {
+  const tab = await getActiveTab();
+  if (tab?.id === undefined) return showFeedback("找不到可操作的分頁。");
+  const response = await sendRuntimeMessage({ type: "START_EDIT_MODE", tabId: tab.id });
+  showFeedback(response.ok ? "Edit mode started." : response.error);
+});
+
+for (const [selector, action] of [["#disable-page", "disable-page"], ["#disable-site", "disable-site"], ["#remove-page", "remove-page"]] as const) {
+  document.querySelector<HTMLButtonElement>(selector)?.addEventListener("click", async () => {
+    const tab = await getActiveTab();
+    if (tab?.id === undefined) return showFeedback("找不到可操作的分頁。");
+    const response = await sendRuntimeMessage({ type: "MANAGE_PAGE_RULES", tabId: tab.id, action });
+    showFeedback(response.ok ? "Page rules updated." : response.error);
+    if (response.ok) await loadStatus();
+  });
+}
 
 protectGmailButton?.addEventListener("click", async () => {
   const tab = await getActiveTab();
@@ -132,6 +151,10 @@ manageButton?.addEventListener("click", () => {
   void chrome.runtime.openOptionsPage();
 });
 
+settingsButton?.addEventListener("click", () => {
+  void chrome.runtime.openOptionsPage();
+});
+
 void loadStatus();
 
 function isGmailUrl(value: string | undefined): boolean {
@@ -146,4 +169,14 @@ function isGmailUrl(value: string | undefined): boolean {
 
 function isChecked(selector: string): boolean {
   return document.querySelector<HTMLInputElement>(selector)?.checked === true;
+}
+
+function humanizeState(state: string): string {
+  return ({
+    protected: "Protected",
+    "partially-protected": "Partially protected",
+    unresolved: "Unresolved",
+    "protection-failure": "Protection failure",
+    "no-masks": "No masks",
+  } as Record<string, string>)[state] ?? state;
 }
