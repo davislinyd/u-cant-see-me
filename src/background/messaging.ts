@@ -56,6 +56,7 @@ async function handleBackgroundMessage(message: ExtensionMessage, sender: chrome
     case "REMASK_RULE":
       return forwardToTab(message.tabId ?? sender.tab?.id, message);
     case "CREATE_GMAIL_RULE":
+      return createGmailRule(message.tabId ?? sender.tab?.id, message);
     case "MASK_CONTEXT_ELEMENT":
     case "REVEAL_CONTEXT_ELEMENT":
     case "REMOVE_CONTEXT_MASK":
@@ -78,6 +79,29 @@ async function handleBackgroundMessage(message: ExtensionMessage, sender: chrome
       await registerProtectionForStoredRules();
       await broadcastRulesChanged(sender.tab?.id);
       return { ok: true };
+  }
+}
+
+async function createGmailRule(tabId: number | undefined, message: Extract<ExtensionMessage, { type: "CREATE_GMAIL_RULE" }>): Promise<MessageResponse> {
+  if (tabId === undefined) {
+    return { ok: false, error: "No active tab is available." };
+  }
+  if (!await injectContentScript(tabId)) {
+    return { ok: false, error: "Gmail site access is required before protection can start." };
+  }
+  return forwardToTab(tabId, message);
+}
+
+async function injectContentScript(tabId: number): Promise<boolean> {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (!tab.url || !await hasHostPermissionForUrl(tab.url)) {
+      return false;
+    }
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    return true;
+  } catch {
+    return false;
   }
 }
 

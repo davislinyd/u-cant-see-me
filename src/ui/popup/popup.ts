@@ -110,7 +110,10 @@ protectGmailButton?.addEventListener("click", async () => {
     showFeedback("找不到可操作的 Gmail 分頁。");
     return;
   }
-  await requestHostPermissionForUrl(tab.url);
+  if (!await requestHostPermissionForUrl(tab.url)) {
+    showFeedback("Gmail protection requires site access.");
+    return;
+  }
   const style = document.querySelector<HTMLSelectElement>("#gmail-mask-style")?.value as MaskType | undefined;
   const response = await sendRuntimeMessage({
     type: "CREATE_GMAIL_RULE",

@@ -90,7 +90,7 @@ function ensurePseudoStyles(): void {
   const style = document.createElement("style");
   style.id = styleId;
   style.textContent = `
-    [data-u-cant-see-me-renderer="pseudo"]::after {
+    [data-u-cant-see-me-renderer="${MASK_RENDERER_IDS.pseudo}"]::after {
       content: "";
       display: block;
       position: absolute;
@@ -98,18 +98,18 @@ function ensurePseudoStyles(): void {
       z-index: 2147483647;
       pointer-events: none;
     }
-    [data-u-cant-see-me-renderer="pseudo"][data-u-cant-see-me-mask-type="black"]::after {
+    [data-u-cant-see-me-renderer="${MASK_RENDERER_IDS.pseudo}"][data-u-cant-see-me-mask-type="black"]::after {
       background: #000;
     }
-    [data-u-cant-see-me-renderer="pseudo"][data-u-cant-see-me-mask-type="white"]::after {
+    [data-u-cant-see-me-renderer="${MASK_RENDERER_IDS.pseudo}"][data-u-cant-see-me-mask-type="white"]::after {
       background: #fff;
     }
-    [data-u-cant-see-me-renderer="pseudo"][data-u-cant-see-me-mask-type="blur"]::after {
+    [data-u-cant-see-me-renderer="${MASK_RENDERER_IDS.pseudo}"][data-u-cant-see-me-mask-type="blur"]::after {
       background: rgba(255, 255, 255, 0.18);
       backdrop-filter: blur(var(--u-cant-see-me-blur, 14px));
       -webkit-backdrop-filter: blur(var(--u-cant-see-me-blur, 14px));
     }
-    [data-u-cant-see-me-renderer="pseudo"][data-u-cant-see-me-mask-type="mosaic"]::after {
+    [data-u-cant-see-me-renderer="${MASK_RENDERER_IDS.pseudo}"][data-u-cant-see-me-mask-type="mosaic"]::after {
       background-color: #202020;
       background-image:
         linear-gradient(45deg, #f4f4f4 25%, transparent 25%, transparent 75%, #f4f4f4 75%),

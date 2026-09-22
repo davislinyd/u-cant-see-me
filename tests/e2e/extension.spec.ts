@@ -102,7 +102,6 @@ test("keeps icon-button selections exact across all mask styles", async ({ baseU
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker", { timeout: 10_000 });
     const tabId = await worker.evaluate(async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id);
     expect(tabId).toBeDefined();
-
     const buttons = "#ticket-actions button";
     await selectAndSave(page, worker, tabId as number, [`${buttons}:nth-of-type(1) svg`, `${buttons}:nth-of-type(2) svg`], "black", false, 2);
     await selectAndSave(page, worker, tabId as number, [`${buttons}:nth-of-type(3) svg`, `${buttons}:nth-of-type(4) svg`], "white", false, 4);
@@ -275,16 +274,17 @@ test("protects synthetic Gmail surfaces through reload, route changes, replaceme
         target: { maskThreadSubject: true, maskMessageBody: true, maskCollapsedPreview: true, maskListSubject: true, maskListSnippet: true },
       });
     }, tabId as number);
-    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(4);
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(7);
 
     await page.reload();
-    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(4);
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(7);
 
     await page.evaluate(() => {
       history.pushState({}, "", "#inbox");
-      document.body.innerHTML = `<main role="main"><div data-thread-id="thread_alpha1"><span data-gmail-list-subject>fixture list subject</span><span data-gmail-list-snippet>fixture list snippet</span></div></main>`;
+      document.body.innerHTML = `<main role="main"><table><tr><td class="yX"><span class="yP">fixture list sender</span></td><td><div class="y6"><span class="bog">fixture list subject</span><span data-thread-id="thread_alpha1"></span></div><span class="y2">fixture list snippet</span></td></tr></table><h2 class="hP" data-legacy-thread-id="thread_other2">other conversation subject</h2><article data-message-id="message_other2"><span class="gD">other sender</span><div class="a3s aiL" style="position: relative">other body</div></article></main>`;
     });
-    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(2);
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(3);
+    await expect(page.locator(".a3s.aiL")).not.toHaveAttribute("data-u-cant-see-me-renderer", "pseudo-layer");
 
     await page.evaluate(() => {
       history.pushState({}, "", "#inbox/thread_alpha1");
@@ -296,6 +296,45 @@ test("protects synthetic Gmail surfaces through reload, route changes, replaceme
       document.body.innerHTML = `<main data-thread-id="thread_alpha1"><h2 data-gmail-thread-subject>fixture unresolved subject</h2></main>`;
     });
     await expect(page.locator("[data-u-cant-see-me-owned]").locator(".u-cant-see-me-gmail-guard")).toBeVisible();
+  } finally {
+    await context.close();
+    await rm(extensionPath, { recursive: true, force: true });
+  }
+});
+
+test("creates Gmail protection on an already-open page", async ({ baseURL }) => {
+  const extensionPath = await createE2eExtension();
+  const context = await chromium.launchPersistentContext("", {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+
+  try {
+    const page = await context.newPage();
+    await page.goto(`${baseURL}/gmail-multi-message-thread.html#inbox/thread_alpha1`);
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker", { timeout: 10_000 });
+    const tabId = await worker.evaluate(async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id);
+    expect(tabId).toBeDefined();
+    await page.locator("[data-gmail-message-body]").first().evaluate((element) => {
+      (element as HTMLElement).style.position = "relative";
+    });
+
+    const extensionId = new URL(worker.url()).host;
+    const popup = await context.newPage();
+    await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+    const response = await popup.evaluate(async (currentTabId) => chrome.runtime.sendMessage({
+      type: "CREATE_GMAIL_RULE",
+      tabId: currentTabId,
+      style: { type: "black" },
+      target: { maskThreadSubject: true, maskMessageBody: true, maskCollapsedPreview: true, maskListSubject: true, maskListSnippet: true },
+    }), tabId as number);
+
+    expect(response).toMatchObject({ ok: true });
+    await expect(page.locator("[data-gmail-message-body]").first()).toHaveAttribute("data-u-cant-see-me-renderer", "pseudo-layer");
+    await expect.poll(() => page.locator("[data-gmail-message-body]").first().evaluate(
+      (element) => getComputedStyle(element, "::after").backgroundColor,
+    )).toBe("rgb(0, 0, 0)");
   } finally {
     await context.close();
     await rm(extensionPath, { recursive: true, force: true });

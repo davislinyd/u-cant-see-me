@@ -1,6 +1,6 @@
 import { GMAIL_SELECTORS } from "./gmail-selectors";
 
-const threadAttributes = ["data-thread-id", "data-legacy-thread-id"] as const;
+const threadAttributes = ["data-legacy-thread-id", "data-thread-id", "data-thread-perm-id"] as const;
 const messageAttributes = ["data-message-id", "data-legacy-message-id"] as const;
 
 export function gmailThreadId(element: Element): string | null {
@@ -23,7 +23,7 @@ function findByIdentifier(root: ParentNode, selector: string, attributes: readon
   const candidates = root instanceof Element && root.matches(selector)
     ? [root, ...root.querySelectorAll(selector)]
     : [...root.querySelectorAll(selector)];
-  return candidates.find((candidate) => readIdentifier(candidate, attributes) === identifier) ?? null;
+  return candidates.find((candidate) => attributes.some((attribute) => candidate.getAttribute(attribute) === identifier)) ?? null;
 }
 
 function readIdentifier(element: Element, attributes: readonly string[]): string | null {
