@@ -7,6 +7,7 @@ const detailElement = document.querySelector<HTMLElement>("#status-detail");
 const countElement = document.querySelector<HTMLElement>("#mask-count");
 const feedbackElement = document.querySelector<HTMLElement>("#feedback");
 const selectButton = document.querySelector<HTMLButtonElement>("#select-elements");
+const revealButton = document.querySelector<HTMLButtonElement>("#reveal-all");
 const manageButton = document.querySelector<HTMLButtonElement>("#manage-masks");
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
@@ -48,6 +49,9 @@ function updateStatus(state: string, detail: string, count: number): void {
   if (countElement) {
     countElement.textContent = String(count);
   }
+  if (revealButton) {
+    revealButton.disabled = count === 0;
+  }
 }
 
 function showFeedback(message: string): void {
@@ -73,6 +77,23 @@ selectButton?.addEventListener("click", async () => {
   showFeedback(automaticRestore
     ? "Selection mode started."
     : "Selection mode started; automatic restore needs site access.");
+});
+
+revealButton?.addEventListener("click", async () => {
+  const tab = await getActiveTab();
+  if (tab?.id === undefined) {
+    showFeedback("找不到可操作的分頁。");
+    return;
+  }
+
+  const response = await sendRuntimeMessage({ type: "REVEAL_ALL", tabId: tab.id, durationMs: 10_000 });
+  if (!response.ok) {
+    showFeedback(response.error);
+    return;
+  }
+
+  showFeedback("All masks are revealed for 10 seconds.");
+  updateStatus("temporarily-revealed", "Masks will relock automatically.", 0);
 });
 
 manageButton?.addEventListener("click", () => {

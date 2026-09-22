@@ -16,6 +16,21 @@
         <span>Stored rules</span>
         <strong id="rule-count">0</strong>
       </section>
+      <section class="settings-card">
+        <h2>Privacy settings</h2>
+        <label class="setting-row" for="privacy-mode">
+          <span>Privacy mode</span>
+          <select id="privacy-mode">
+            <option value="maximum">Maximum Privacy</option>
+            <option value="balanced">Balanced</option>
+            <option value="performance">Performance</option>
+          </select>
+        </label>
+        <label class="setting-row" for="strict-mask">
+          <span>Strict Mask blocks pointer interaction and copy inside masked targets</span>
+          <input id="strict-mask" type="checkbox" />
+        </label>
+      </section>
       <section>
         <h2>Rules</h2>
         <p id="empty-state" class="empty-state">目前沒有已儲存的遮罩規則。</p>

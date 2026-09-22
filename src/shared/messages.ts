@@ -9,8 +9,10 @@ export type ExtensionMessage =
   | { type: "SAVE_RULES"; rules: MaskRule[] }
   | { type: "REMOVE_RULE"; ruleId: string }
   | { type: "GET_RULES" }
-  | { type: "REVEAL_RULE"; ruleId: string; durationMs: number }
-  | { type: "REMASK_RULE"; ruleId: string }
+  | { type: "REVEAL_RULE"; ruleId: string; durationMs: number; tabId?: number }
+  | { type: "REVEAL_ALL"; durationMs: number; tabId?: number }
+  | { type: "REMASK_RULE"; ruleId: string; tabId?: number }
+  | { type: "RELOCK_ALL" }
   | { type: "RULES_CHANGED" }
   | { type: "GET_PAGE_STATUS" };
 
@@ -40,12 +42,19 @@ export function isExtensionMessage(value: unknown): value is ExtensionMessage {
     case "GET_RULES":
     case "RULES_CHANGED":
     case "GET_PAGE_STATUS":
+    case "RELOCK_ALL":
       return value.type !== "START_SELECTION" || value.tabId === undefined || typeof value.tabId === "number";
     case "REMOVE_RULE":
+      return typeof value.ruleId === "string";
     case "REVEAL_RULE":
+      return typeof value.ruleId === "string" && typeof value.durationMs === "number" &&
+        (value.tabId === undefined || typeof value.tabId === "number");
+    case "REVEAL_ALL":
+      return typeof value.durationMs === "number" &&
+        (value.tabId === undefined || typeof value.tabId === "number");
     case "REMASK_RULE":
       return typeof value.ruleId === "string" &&
-        (value.type !== "REVEAL_RULE" || typeof value.durationMs === "number");
+        (value.tabId === undefined || typeof value.tabId === "number");
     case "SAVE_RULE":
       return isRecord(value.rule) && typeof value.rule.id === "string";
     case "SAVE_RULES":

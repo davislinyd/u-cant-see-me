@@ -47,7 +47,9 @@ The contract is isolated in `src/content/renderer/`. The pseudo renderer covers 
 
 ## Privacy model and future Privacy Gate
 
-Phase 1 dynamically registers `content.js` at `document_start` for origins with persistent rules after the user grants the origin permission, but it does not claim anti-flash protection. Phase 3 will add a Privacy Gate before resolving protected targets. Maximum Privacy mode should keep the page or protected region guarded until recovery is complete; Balanced and Performance modes can reduce guarding after their trade-offs are explicit in the UI. Chromium timing limits must be documented rather than described as mathematical secrecy.
+For an origin with saved rules and granted host access, the service worker registers `content.js` persistently at `document_start`. Before storage reads begin, the content script installs the Privacy Gate. Maximum Privacy is the default opaque guard, Balanced is a dim guard, and Performance releases aggressive guarding. The gate follows `guarded → masked → released` when all applicable rules resolve. For an unresolved generic rule it remains through DOM readiness plus a short recovery window, then releases so one stale locator cannot permanently freeze an unrelated page. Chromium scheduling limits mean this is anti-flash risk reduction, not mathematical zero-frame secrecy.
+
+Temporary reveal state stays in content-script runtime memory and never mutates `MaskRule` or survives navigation/session restart. Supported durations are 5, 10, 30, and 60 seconds. The controller remasks on expiry and honors navigation, window-blur, and tab-deactivation relock settings. `PrintProtectionController` applies temporary inline opacity during `beforeprint` and restores it after printing. `StrictMaskController` optionally blocks pointer and copy events whose source is inside an active masked target.
 
 ## Security model
 

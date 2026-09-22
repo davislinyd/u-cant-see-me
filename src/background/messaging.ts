@@ -1,8 +1,8 @@
 import { RuleStore } from "../storage/rule-store";
 import { isExtensionMessage, type ExtensionMessage, type MessageResponse } from "../shared/messages";
-import { originPatternForUrl } from "../shared/utils";
+import { originForSiteScope, originPatternForUrl } from "../shared/utils";
 import { hasHostPermissionForUrl } from "./permissions";
-import { registerProtectionScript } from "./script-registration";
+import { registerProtectionScript, unregisterProtectionScript } from "./script-registration";
 
 const ruleStore = new RuleStore();
 
@@ -38,6 +38,7 @@ async function handleBackgroundMessage(message: ExtensionMessage, sender: chrome
       await broadcastRulesChanged(sender.tab?.id);
       return { ok: true };
     case "REMOVE_RULE":
+      await unregisterProtectionForRemovedRule(message.ruleId);
       await ruleStore.remove(message.ruleId);
       await broadcastRulesChanged(sender.tab?.id);
       return { ok: true };
@@ -47,8 +48,12 @@ async function handleBackgroundMessage(message: ExtensionMessage, sender: chrome
       return await startSelection(message.tabId);
     case "STOP_SELECTION":
       return await forwardToTab(sender.tab?.id, message);
+    case "REVEAL_ALL":
+      return forwardToTab(message.tabId, message);
     case "REVEAL_RULE":
     case "REMASK_RULE":
+      return forwardToTab(message.tabId ?? sender.tab?.id, message);
+    case "RELOCK_ALL":
     case "RULES_CHANGED":
       return { ok: true };
   }
@@ -110,6 +115,23 @@ async function registerProtectionForSenderTab(sender: chrome.runtime.MessageSend
       await registerProtectionScript(origin);
     } catch {
       // ActiveTab access can be temporary; the rule remains safely stored.
+    }
+  }
+}
+
+async function unregisterProtectionForRemovedRule(ruleId: string): Promise<void> {
+  const removedRule = (await ruleStore.list()).find((rule) => rule.id === ruleId);
+  const origin = removedRule ? originForSiteScope(removedRule.scope) : null;
+  if (!origin) {
+    return;
+  }
+
+  const remainingRules = (await ruleStore.list()).filter((rule) => rule.id !== ruleId);
+  if (!remainingRules.some((rule) => originForSiteScope(rule.scope) === origin)) {
+    try {
+      await unregisterProtectionScript(`${origin}/*`);
+    } catch {
+      // Removing a local rule must not fail because an old dynamic script is already absent.
     }
   }
 }

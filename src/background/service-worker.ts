@@ -1,6 +1,7 @@
 import { registerBackgroundMessaging } from "./messaging";
 
 const ROOT_MENU_ID = "u-cant-see-me-root";
+const activeTabsByWindow = new Map<number, number>();
 
 function initializeContextMenus(): void {
   chrome.contextMenus.removeAll(() => {
@@ -32,6 +33,23 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onStartup.addListener(() => {
   initializeContextMenus();
+});
+
+chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
+  const previousTabId = activeTabsByWindow.get(windowId);
+  activeTabsByWindow.set(windowId, tabId);
+  if (previousTabId === undefined || previousTabId === tabId) {
+    return;
+  }
+  void chrome.tabs.sendMessage(previousTabId, { type: "RELOCK_ALL" }).catch(() => undefined);
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  for (const [windowId, activeTabId] of activeTabsByWindow) {
+    if (activeTabId === tabId) {
+      activeTabsByWindow.delete(windowId);
+    }
+  }
 });
 
 registerBackgroundMessaging();

@@ -8,6 +8,7 @@ export class MaskManager {
   private rules: MaskRule[] = [];
   private readonly activeMasks = new Map<string, RendererHandle>();
   private readonly renderers = createRendererChain();
+  private temporarilyRevealedRuleIds = new Set<string>();
 
   constructor(private readonly adapter: SiteAdapter) {}
 
@@ -15,11 +16,26 @@ export class MaskManager {
     this.rules = rules;
   }
 
+  setTemporarilyRevealed(ruleIds: Set<string>): void {
+    this.temporarilyRevealedRuleIds = new Set(ruleIds);
+    for (const [ruleId, handle] of this.activeMasks) {
+      if (this.temporarilyRevealedRuleIds.has(ruleId)) {
+        handle.dispose();
+        this.activeMasks.delete(ruleId);
+      }
+    }
+  }
+
+  applicableRuleIds(href: string): string[] {
+    return this.applicableRules(href).map((rule) => rule.id);
+  }
+
   resolveAndApply(href: string, root: ParentNode = document): PageStatus {
     const applicableRules = this.applicableRules(href);
-    this.disposeInactiveMasks(applicableRules);
+    const maskableRules = this.maskableRules(applicableRules);
+    this.disposeInactiveMasks(maskableRules);
 
-    for (const rule of applicableRules) {
+    for (const rule of maskableRules) {
       const existing = this.activeMasks.get(rule.id);
       if (existing?.isHealthy()) {
         existing.refresh();
@@ -39,7 +55,8 @@ export class MaskManager {
   reconcileMutations(href: string, records: MutationRecord[]): PageStatus {
     developmentMetrics.recordMutationBatch();
     const applicableRules = this.applicableRules(href);
-    this.disposeInactiveMasks(applicableRules);
+    const maskableRules = this.maskableRules(applicableRules);
+    this.disposeInactiveMasks(maskableRules);
 
     for (const [ruleId, handle] of this.activeMasks) {
       if (!handle.isHealthy()) {
@@ -52,7 +69,7 @@ export class MaskManager {
 
     const roots = rootsFromMutations(records);
     if (roots.length > 0) {
-      for (const rule of applicableRules) {
+      for (const rule of maskableRules) {
         if (!this.activeMasks.has(rule.id)) {
           this.resolveRule(rule, roots);
         }
@@ -77,6 +94,10 @@ export class MaskManager {
     return this.rules.filter((rule) => rule.enabled && matchesSiteScope(rule.scope, href));
   }
 
+  private maskableRules(applicableRules: MaskRule[]): MaskRule[] {
+    return applicableRules.filter((rule) => !this.temporarilyRevealedRuleIds.has(rule.id));
+  }
+
   private resolveRule(rule: MaskRule, roots: ParentNode[]): boolean {
     for (const root of roots) {
       developmentMetrics.recordResolverExecution();
@@ -96,15 +117,16 @@ export class MaskManager {
   }
 
   private createStatus(applicableRules: MaskRule[]): PageStatus {
-    const activeMasks = applicableRules.filter((rule) => this.activeMasks.has(rule.id)).length;
-    const unresolvedRules = applicableRules.length - activeMasks;
+    const maskableRules = this.maskableRules(applicableRules);
+    const activeMasks = maskableRules.filter((rule) => this.activeMasks.has(rule.id)).length;
+    const unresolvedRules = maskableRules.length - activeMasks;
     developmentMetrics.recordResolution(activeMasks, unresolvedRules);
     return {
       state: applicableRules.length === 0
         ? "no-masks"
         : unresolvedRules > 0
           ? "unresolved"
-          : activeMasks === applicableRules.length
+          : activeMasks === maskableRules.length
             ? "protected"
             : "partially-protected",
       applicableRules: applicableRules.length,

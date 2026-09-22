@@ -59,6 +59,30 @@ h2 {
   padding: 18px 20px;
 }
 
+.settings-card {
+  background: #fff;
+  border: 1px solid #e2e5ef;
+  border-radius: 14px;
+  margin-top: 16px;
+  padding: 18px 20px;
+}
+
+.settings-card h2 {
+  margin-top: 0;
+}
+
+.setting-row {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.setting-row span {
+  line-height: 1.4;
+}
+
 .summary-card strong {
   font-size: 26px;
 }

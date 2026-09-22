@@ -45,6 +45,16 @@ export function originPatternForUrl(href: string): string | null {
   return `${location.origin}/*`;
 }
 
+export function originForSiteScope(scope: SiteScope): string | null {
+  switch (scope.kind) {
+    case "exact-url":
+      return toSiteLocation(scope.value)?.origin ?? null;
+    case "origin":
+    case "path-pattern":
+      return scope.origin;
+  }
+}
+
 export function matchesSiteScope(scope: SiteScope, href: string): boolean {
   const location = toSiteLocation(href);
   if (!location) {

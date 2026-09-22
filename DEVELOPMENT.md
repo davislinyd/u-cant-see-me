@@ -27,8 +27,8 @@ The Phase 1 popup starts selection on the active tab. The selection controller s
 
 Fixtures are synthetic. Do not add real emails, passwords, page bodies, screenshots containing private data, or exported user rules to the repository. Tests should assert structural behavior and sanitized status, not persist or print page content.
 
-The E2E fixtures are synthetic. `basic.html` covers generic selection; `spa.html` covers target and parent replacement, delayed rendering, virtualized-list reorder, resize, and History API route transitions. E2E creates a temporary copy of `dist/` and adds host access only to that copy, so production `manifest.json` keeps host access optional.
+The E2E fixtures are synthetic. `basic.html` covers generic selection; `spa.html` covers target and parent replacement, delayed rendering, virtualized-list reorder, resize, and History API route transitions; `gate.html` verifies the document-start `guarded → masked` sequence, temporary reveal/relock, and print concealment. E2E creates a temporary copy of `dist/` and adds host access only to that copy, so production `manifest.json` keeps host access optional.
 
-## Phase 3 handoff
+## Phase 4 handoff
 
-The next implementation milestone is the Privacy Gate: document-start anti-flash behavior, explicit privacy modes, temporary reveal, and relock lifecycle. The generic adapter intentionally does not recover across cross-origin frames or closed shadow roots.
+The next implementation milestone is GmailAdapter and per-message privacy protection. The generic adapter intentionally does not recover across cross-origin frames or closed shadow roots. Privacy Gate timing is best-effort within Chromium document-start limits and must not be described as a proof of zero-frame secrecy.

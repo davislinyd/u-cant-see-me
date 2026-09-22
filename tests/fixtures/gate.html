@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>U Cant See Me Privacy Gate fixture</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 24px; }
+      .protected-card { background: #eff3ff; border-radius: 8px; min-height: 88px; padding: 16px; width: 280px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>U Cant See Me Privacy Gate fixture</h1>
+      <div id="app"></div>
+    </main>
+    <script>
+      const app = document.querySelector("#app");
+      const reloadKey = "u-cant-see-me-gate-fixture-loaded";
+      function mountTarget() {
+        app.innerHTML = `<article id="gate-target" class="protected-card"><strong>Protected synthetic account</strong></article>`;
+      }
+      if (sessionStorage.getItem(reloadKey)) {
+        window.setTimeout(mountTarget, 350);
+      } else {
+        sessionStorage.setItem(reloadKey, "true");
+        mountTarget();
+      }
+    </script>
+  </body>
+</html>

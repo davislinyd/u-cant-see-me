@@ -148,6 +148,62 @@ test("self-heals a saved mask through dynamic SPA rendering and route changes", 
   }
 });
 
+test("guards document start, then supports temporary reveal, relock, and print protection", async ({ baseURL }) => {
+  const extensionPath = await createE2eExtension();
+  const context = await chromium.launchPersistentContext("", {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`,
+    ],
+  });
+
+  try {
+    const page = await context.newPage();
+    await page.goto(`${baseURL}/gate.html`);
+    await expect(page.locator("h1")).toHaveText("U Cant See Me Privacy Gate fixture");
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker", { timeout: 10_000 });
+    const tabId = await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      return tab?.id;
+    });
+    expect(tabId).toBeDefined();
+
+    await selectAndSave(page, worker, tabId as number, ["#gate-target"], "black", false, 1);
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator("html[data-u-cant-see-me-privacy-gate]")).toBeAttached();
+    await expect(page.locator("#gate-target")).toBeVisible();
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(1);
+    await expect(page.locator("html[data-u-cant-see-me-privacy-gate]")).toHaveCount(0);
+
+    const activeWorker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker", { timeout: 10_000 });
+    const revealResponse = await activeWorker.evaluate(async (currentTabId) => {
+      return chrome.tabs.sendMessage(currentTabId, { type: "REVEAL_ALL", durationMs: 10_000 });
+    }, tabId);
+    expect(revealResponse).toMatchObject({ ok: true });
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(0);
+    await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(1);
+
+    const timerResponse = await activeWorker.evaluate(async (currentTabId) => {
+      return chrome.tabs.sendMessage(currentTabId, { type: "REVEAL_ALL", durationMs: 5_000 });
+    }, tabId);
+    expect(timerResponse).toMatchObject({ ok: true });
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(0);
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(1, { timeout: 6_500 });
+
+    await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+    await expect.poll(async () => page.locator("#gate-target").evaluate((target) => (target as HTMLElement).style.opacity)).toBe("0");
+    await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
+    await expect.poll(async () => page.locator("#gate-target").evaluate((target) => (target as HTMLElement).style.opacity)).toBe("");
+  } finally {
+    await context.close();
+    await rm(extensionPath, { recursive: true, force: true });
+  }
+});
+
 async function createE2eExtension(): Promise<string> {
   const sourcePath = resolve(process.cwd(), "dist");
   const extensionPath = await mkdtemp(resolve(tmpdir(), "u-cant-see-me-e2e-"));
