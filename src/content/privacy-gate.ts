@@ -10,8 +10,10 @@ export class PrivacyGate {
   private settleTimer: number | null = null;
   private domReady = document.readyState !== "loading";
   private waitingForRecovery = false;
+  private initializing = false;
 
   install(): void {
+    this.initializing = true;
     if (!this.domReady) {
       document.addEventListener("DOMContentLoaded", this.handleDomReady, { once: true });
     }
@@ -22,7 +24,7 @@ export class PrivacyGate {
     this.mode = mode;
     if (mode === "performance") {
       this.release();
-    } else {
+    } else if (this.initializing) {
       this.show();
     }
   }
@@ -31,6 +33,13 @@ export class PrivacyGate {
     if (this.mode === "performance" || status.applicableRules === 0 || status.unresolvedRules === 0) {
       this.waitingForRecovery = false;
       this.release();
+      return;
+    }
+
+    // The full-page gate is only a document-start anti-flash guard. Reopening
+    // it during later mutation reconciliation turns one stale rule into a
+    // recurring black screen on dynamic applications.
+    if (!this.initializing) {
       return;
     }
 
@@ -46,6 +55,7 @@ export class PrivacyGate {
     }
     this.gate?.remove();
     this.gate = null;
+    this.initializing = false;
     document.documentElement.removeAttribute(PRIVACY_GATE_ATTRIBUTE);
   }
 

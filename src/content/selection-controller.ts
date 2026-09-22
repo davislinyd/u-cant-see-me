@@ -72,7 +72,7 @@ export class SelectionController {
       return;
     }
 
-    const target = event.target instanceof Element ? event.target : null;
+    const target = selectableTarget(event.target);
     if (!target || target === document.documentElement || target === document.body) {
       return;
     }
@@ -86,7 +86,7 @@ export class SelectionController {
       return;
     }
 
-    const target = event.target instanceof Element ? event.target : null;
+    const target = selectableTarget(event.target);
     if (!target || target === document.documentElement || target === document.body) {
       return;
     }
@@ -271,6 +271,16 @@ export class SelectionController {
     shadowRoot.append(toast);
     window.setTimeout(() => toast.remove(), 3500);
   }
+}
+
+function selectableTarget(target: EventTarget | null): Element | null {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+
+  // Pointer events on icons, labels, and SVG paths should select their
+  // interactive control, not an unstable implementation detail.
+  return target.closest("button, a, input, select, textarea, [role='button'], [role='link']") ?? target;
 }
 
 function ensureSelectionStyles(shadowRoot: ShadowRoot): void {

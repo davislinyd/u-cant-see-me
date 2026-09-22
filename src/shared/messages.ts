@@ -1,5 +1,5 @@
 import { MESSAGE_TYPES } from "./constants";
-import type { GmailMaskTarget, MaskRule, MaskStyle, PageRuleAction, PageStatus, RuleTestResult, TemporaryRevealState } from "./types";
+import type { GmailMaskTarget, MaskRule, MaskStyle, PageDiagnostics, PageRuleAction, PageStatus, RuleTestResult, TemporaryRevealState } from "./types";
 import { isRecord } from "./utils";
 
 export type ExtensionMessage =
@@ -24,7 +24,8 @@ export type ExtensionMessage =
   | { type: "PROTECT_GMAIL_CONTEXT_MESSAGE"; tabId?: number }
   | { type: "START_EDIT_MODE"; tabId?: number }
   | { type: "STOP_EDIT_MODE"; tabId?: number }
-  | { type: "UPDATE_BADGE"; status: PageStatus };
+  | { type: "UPDATE_BADGE"; status: PageStatus }
+  | { type: "GET_PAGE_DIAGNOSTICS"; tabId?: number };
 
 export type GmailRuleOptions = Omit<GmailMaskTarget, "threadId" | "messageId">;
 
@@ -33,6 +34,7 @@ export type MessageData =
   | boolean
   | MaskRule[]
   | PageStatus
+  | PageDiagnostics
   | RuleTestResult
   | TemporaryRevealState;
 
@@ -55,6 +57,7 @@ export function isExtensionMessage(value: unknown): value is ExtensionMessage {
     case "GET_RULES":
     case "RULES_CHANGED":
     case "GET_PAGE_STATUS":
+    case "GET_PAGE_DIAGNOSTICS":
     case "RELOCK_ALL":
     case "MASK_CONTEXT_ELEMENT":
     case "REVEAL_CONTEXT_ELEMENT":

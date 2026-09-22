@@ -50,10 +50,11 @@ export class PseudoRenderer implements MaskRenderer {
 
     return {
       activeMask,
-      refresh: () => undefined,
+      refresh: () => ensurePseudoStyles(),
       isHealthy: () => element.isConnected &&
         element.getAttribute("data-u-cant-see-me-renderer") === this.id &&
-        element.getAttribute("data-u-cant-see-me-mask-type") === style.type,
+        element.getAttribute("data-u-cant-see-me-mask-type") === style.type &&
+        document.getElementById("u-cant-see-me-pseudo-renderer") !== null,
       dispose: () => {
         restoreAttribute(element, "data-u-cant-see-me-renderer", previousRenderer);
         restoreAttribute(element, "data-u-cant-see-me-mask-type", previousType);

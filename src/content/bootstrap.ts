@@ -5,7 +5,7 @@ import { RuleStore } from "../storage/rule-store";
 import { SettingsStore } from "../storage/settings-store";
 import { CONTENT_READY_ATTRIBUTE, CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS, STORAGE_KEYS } from "../shared/constants";
 import { isExtensionMessage, type ExtensionMessage, type GmailRuleOptions, type MessageResponse } from "../shared/messages";
-import type { ExtensionSettings, MaskRule, MaskStyle, PageStatus } from "../shared/types";
+import type { ExtensionSettings, MaskRule, MaskStyle, PageDiagnostics, PageStatus } from "../shared/types";
 import { createId } from "../shared/utils";
 import { generateLocator } from "./locator/selector-generator";
 import { MaskManager } from "./mask-manager";
@@ -110,6 +110,8 @@ async function handleMessage(message: ExtensionMessage): Promise<MessageResponse
   switch (message.type) {
     case "GET_PAGE_STATUS":
       return { ok: true, data: currentStatus() };
+    case "GET_PAGE_DIAGNOSTICS":
+      return { ok: true, data: pageDiagnostics() };
     case "START_SELECTION":
       selectionController.start(defaultMaskStyle);
       return { ok: true, data: true };
@@ -153,6 +155,12 @@ async function handleMessage(message: ExtensionMessage): Promise<MessageResponse
     default:
       return { ok: true };
   }
+}
+
+function pageDiagnostics(): PageDiagnostics {
+  return adapter instanceof GmailAdapter
+    ? { adapterId: adapter.id, gmail: adapter.diagnostics() }
+    : { adapterId: adapter.id };
 }
 
 async function saveGmailRule(options: GmailRuleOptions, style: MaskStyle, messageId?: string): Promise<MessageResponse> {

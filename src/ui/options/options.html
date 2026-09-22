@@ -25,6 +25,11 @@
         <button id="export-config" type="button">Export configuration</button>
         <label class="import-button">Import configuration<input id="import-config" type="file" accept="application/json,.json" /></label>
       </section>
+      <section class="diagnostics-card">
+        <div class="section-heading"><h2>Developer diagnostics</h2><button id="load-diagnostics" type="button">Inspect current page</button></div>
+        <p>Shows structural IDs and surface availability only; never email or page text.</p>
+        <pre id="diagnostics-output" hidden></pre>
+      </section>
       <section>
         <div class="section-heading"><h2>Rules</h2><button id="refresh-status" type="button">Test current page</button></div>
         <form id="rule-filters" class="rule-filters">

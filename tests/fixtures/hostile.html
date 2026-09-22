@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8" /><title>Hostile rendering fixture</title>
+<style>#pseudo-target{position:relative;padding:20px;background:#eef3ff}#portal-target{margin-top:16px;padding:20px;background:#fff2e8}</style>
+</head><body>
+  <h1>Hostile rendering fixture</h1>
+  <div id="pseudo-target">Synthetic pseudo target</div>
+  <div id="portal-target">Synthetic portal target</div>
+  <button id="remove-pseudo-style">Remove pseudo style</button>
+  <button id="remove-extension-root">Remove extension root</button>
+  <button id="mutation-storm">Run mutation storm</button>
+  <script>
+    document.querySelector('#remove-pseudo-style').addEventListener('click', () => document.querySelector('#u-cant-see-me-pseudo-renderer')?.remove());
+    document.querySelector('#remove-extension-root').addEventListener('click', () => document.querySelector('[data-u-cant-see-me-owned]')?.remove());
+    document.querySelector('#mutation-storm').addEventListener('click', () => { for (let i = 0; i < 1000; i += 1) { const node = document.createElement('i'); node.dataset.noise = String(i); document.body.append(node); node.remove(); } });
+  </script>
+</body></html>

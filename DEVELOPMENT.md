@@ -36,3 +36,9 @@ Gmail support is tested only against synthetic rendered-DOM fixtures. It does no
 ## Phase 5 management checks
 
 The Options UI test creates a synthetic rule, disables it, duplicates it, and deletes it while confirming the active content-script mask changes accordingly. Locator testing is explicit and targets the most recently used http(s) tab, so it never treats an extension page as a page target. JSON import is unit-tested to reject an envelope if any rule is malformed. Context-menu actions require a running content script to know the locally clicked node; use normal selection on a first-time origin. No test or manual workflow should use a real Gmail account.
+
+## Phase 6 hardening checks
+
+`hostile.html` removes the pseudo renderer style and extension-owned portal root, then creates a 1,000-event mutation storm; the E2E suite confirms recovery. `stress.html` creates 100 synthetic targets/rules and a second 1,000-event storm. `gmail-fixtures.test.ts` loads every Gmail fixture and verifies that diagnostics retain structural IDs only. Run the full Chromium matrix with `npm run test:e2e`.
+
+The Phase 6 release checklist requires separate manual loading of the exact `dist/` build in latest stable Brave and Edge. The current Brave live regression covers a reload and two targets for each mask style, including verification that the initialization Privacy Gate does not reappear after release. Edge confirmation cannot be inferred from Chromium automation and remains required before a browser-matrix release.

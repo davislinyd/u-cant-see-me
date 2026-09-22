@@ -2,7 +2,7 @@ import "./options.css";
 import { RuleStore } from "../../storage/rule-store";
 import { SettingsStore } from "../../storage/settings-store";
 import { validateImportedConfiguration } from "../../storage/migrations";
-import type { MaskRule, MaskType, PrivacyMode, RuleTestResult, SiteScope } from "../../shared/types";
+import type { MaskRule, MaskType, PageDiagnostics, PrivacyMode, RuleTestResult, SiteScope } from "../../shared/types";
 import type { ExtensionMessage, MessageResponse } from "../../shared/messages";
 import { createId } from "../../shared/utils";
 
@@ -18,6 +18,8 @@ const filterForm = document.querySelector<HTMLFormElement>("#rule-filters");
 const refreshStatusButton = document.querySelector<HTMLButtonElement>("#refresh-status");
 const exportButton = document.querySelector<HTMLButtonElement>("#export-config");
 const importInput = document.querySelector<HTMLInputElement>("#import-config");
+const diagnosticsButton = document.querySelector<HTMLButtonElement>("#load-diagnostics");
+const diagnosticsOutput = document.querySelector<HTMLElement>("#diagnostics-output");
 let rules: MaskRule[] = [];
 const healthByRuleId = new Map<string, RuleTestResult>();
 
@@ -144,6 +146,16 @@ filterForm?.addEventListener("change", renderRules);
 refreshStatusButton?.addEventListener("click", () => void refreshRuleHealth());
 exportButton?.addEventListener("click", () => void exportConfiguration());
 importInput?.addEventListener("change", () => void importConfiguration());
+diagnosticsButton?.addEventListener("click", () => void loadDiagnostics());
+
+async function loadDiagnostics(): Promise<void> {
+  const response = await chrome.runtime.sendMessage({ type: "GET_PAGE_DIAGNOSTICS" } satisfies ExtensionMessage) as MessageResponse;
+  if (!response.ok || !isPageDiagnostics(response.data)) return showFeedback(response.ok ? "目前分頁沒有可用的診斷資料。" : response.error);
+  if (diagnosticsOutput) {
+    diagnosticsOutput.hidden = false;
+    diagnosticsOutput.textContent = JSON.stringify(response.data, null, 2);
+  }
+}
 
 async function exportConfiguration(): Promise<void> {
   const [storedRules, settings] = await Promise.all([ruleStore.list(), settingsStore.get()]);
@@ -213,6 +225,7 @@ function adapterLabel(rule: MaskRule): string { return rule.gmailTarget ? "Gmail
 function healthLabel(rule: MaskRule): string { const health = healthByRuleId.get(rule.id); return health ? (health.resolved ? "resolved" : "unresolved") : "not tested"; }
 function showFeedback(message: string): void { if (feedbackElement) feedbackElement.textContent = message; }
 function isRuleTestResult(value: unknown): value is RuleTestResult { return typeof value === "object" && value !== null && "resolved" in value && "targetCount" in value; }
+function isPageDiagnostics(value: unknown): value is PageDiagnostics { return typeof value === "object" && value !== null && "adapterId" in value; }
 function button(label: string, onClick: () => void): HTMLButtonElement { const element = document.createElement("button"); element.type = "button"; element.textContent = label; element.addEventListener("click", onClick); return element; }
 function checkbox(label: string, checked: boolean, onChange: (checked: boolean) => Promise<void>): HTMLLabelElement { const element = document.createElement("label"); const input = document.createElement("input"); input.type = "checkbox"; input.checked = checked; input.addEventListener("change", () => void onChange(input.checked)); element.append(input, ` ${label}`); return element; }
 function select(values: string[], current: string, onChange: (value: string) => Promise<void>): HTMLSelectElement { const element = document.createElement("select"); for (const value of values) { const option = new Option(value, value, false, value === current); element.append(option); } element.addEventListener("change", () => void onChange(element.value)); return element; }

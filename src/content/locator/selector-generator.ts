@@ -28,12 +28,10 @@ function choosePrimaryStrategy(element: Element): LocatorStrategy {
     }
   }
 
-  const role = element.getAttribute("role");
-  if (role && isStableToken(role)) {
-    return { kind: "role", value: role };
-  }
-
-  return { kind: "tag", value: element.tagName.toLowerCase() };
+  // A tag or role alone is never specific enough for real application UIs.
+  // Preserve an exact structural path as the primary selector, then let the
+  // fingerprint-backed fallbacks handle intentional DOM replacements.
+  return { kind: "css", value: createStructuralPath(element) };
 }
 
 function buildFallbacks(element: Element, primary: LocatorStrategy): LocatorStrategy[] {
@@ -53,8 +51,6 @@ function buildFallbacks(element: Element, primary: LocatorStrategy): LocatorStra
 
   const name = element.getAttribute("name");
   const type = element.getAttribute("type");
-  const tag = element.tagName.toLowerCase();
-
   if (name && isStableToken(name) && !isSameStrategy(primary, { kind: "attribute", name: "name", value: name })) {
     fallbacks.push({ kind: "attribute", name: "name", value: name });
   }
@@ -63,15 +59,39 @@ function buildFallbacks(element: Element, primary: LocatorStrategy): LocatorStra
     fallbacks.push({ kind: "attribute", name: "type", value: type });
   }
 
-  if (!isSameStrategy(primary, { kind: "tag", value: tag })) {
-    fallbacks.push({ kind: "tag", value: tag });
-  }
-
   return fallbacks;
 }
 
+function createStructuralPath(element: Element): string {
+  const anchor = nearestStableIdAncestor(element);
+  const segments: string[] = [];
+  let current: Element | null = element;
+
+  while (current && current !== document.body && current !== anchor) {
+    const tag = current.tagName.toLowerCase();
+    const siblings = current.parentElement
+      ? [...current.parentElement.children].filter((sibling) => sibling.tagName === current?.tagName)
+      : [];
+    const index = siblings.indexOf(current) + 1;
+    segments.unshift(`${tag}:nth-of-type(${Math.max(1, index)})`);
+    current = current.parentElement;
+  }
+
+  const prefix = anchor ? `#${anchor.id}` : "body";
+  return segments.length > 0 ? `${prefix} > ${segments.join(" > ")}` : prefix;
+}
+
 function isStableToken(value: string): boolean {
-  return value.length <= 80 && /^[a-zA-Z0-9:_-]+$/.test(value);
+  return value.length <= 80 && /^[a-zA-Z0-9:_-]+$/.test(value) && !/^:r[\w-]+:$/.test(value);
+}
+
+function nearestStableIdAncestor(element: Element): Element | null {
+  for (let current = element.parentElement; current && current !== document.body; current = current.parentElement) {
+    if (current.id && isStableToken(current.id)) {
+      return current;
+    }
+  }
+  return null;
 }
 
 function isSameStrategy(left: LocatorStrategy, right: LocatorStrategy): boolean {

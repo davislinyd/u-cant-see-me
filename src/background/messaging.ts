@@ -65,6 +65,8 @@ async function handleBackgroundMessage(message: ExtensionMessage, sender: chrome
       return forwardToTab(message.tabId ?? sender.tab?.id, message);
     case "TEST_RULE":
       return forwardToTab(message.tabId ?? await mostRecentWebTabId(), message);
+    case "GET_PAGE_DIAGNOSTICS":
+      return forwardToTab(message.tabId ?? await mostRecentWebTabId(), message);
     case "MANAGE_PAGE_RULES":
       return managePageRules(message);
     case "UPDATE_BADGE":

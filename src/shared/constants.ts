@@ -52,6 +52,7 @@ export const MESSAGE_TYPES = [
   "START_EDIT_MODE",
   "STOP_EDIT_MODE",
   "UPDATE_BADGE",
+  "GET_PAGE_DIAGNOSTICS",
 ] as const;
 
 export const MASK_RENDERER_IDS = {

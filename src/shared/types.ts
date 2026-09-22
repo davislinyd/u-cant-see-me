@@ -143,4 +143,19 @@ export interface RuleTestResult {
   targetCount: number;
 }
 
+export interface GmailDiagnostics {
+  domProfileVersion: string;
+  threadIds: string[];
+  messageIds: string[];
+  subjectSurfaceFound: boolean;
+  bodySurfaceFound: boolean;
+  listSurfaceFound: boolean;
+  guardActive: boolean;
+}
+
+export interface PageDiagnostics {
+  adapterId: string;
+  gmail?: GmailDiagnostics;
+}
+
 export type PageRuleAction = "disable-page" | "disable-site" | "remove-page";

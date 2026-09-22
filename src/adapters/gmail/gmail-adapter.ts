@@ -1,4 +1,4 @@
-import type { AdapterResolution, ElementLocator, GmailMaskTarget, MaskRule, SiteAdapter, SiteLocation } from "../../shared/types";
+import type { AdapterResolution, ElementLocator, GmailDiagnostics, GmailMaskTarget, MaskRule, SiteAdapter, SiteLocation } from "../../shared/types";
 import { resolveLocator } from "../../content/locator/locator-engine";
 import { generateLocator } from "../../content/locator/selector-generator";
 import { gmailMessageId, gmailThreadId } from "./gmail-identifiers";
@@ -57,6 +57,21 @@ export class GmailAdapter implements SiteAdapter {
   messageIdForElement(element: Element): string | undefined {
     const messageRoot = element.closest(GMAIL_SELECTORS.messageRoot);
     return messageRoot ? gmailMessageId(messageRoot) ?? undefined : undefined;
+  }
+
+  diagnostics(root: ParentNode = document): GmailDiagnostics {
+    const identifiers = (selector: string, read: (element: Element) => string | null) => [...root.querySelectorAll(selector)]
+      .map(read).filter((value): value is string => value !== null);
+    const extensionRoot = document.querySelector("[data-u-cant-see-me-owned]") as HTMLElement | null;
+    return {
+      domProfileVersion: this.domProfileVersion,
+      threadIds: [...new Set(identifiers(GMAIL_SELECTORS.threadRoot, gmailThreadId))],
+      messageIds: [...new Set(identifiers(GMAIL_SELECTORS.messageRoot, gmailMessageId))],
+      subjectSurfaceFound: root.querySelector(GMAIL_SELECTORS.threadSubject) !== null,
+      bodySurfaceFound: root.querySelector(GMAIL_SELECTORS.messageBody) !== null,
+      listSurfaceFound: root.querySelector(GMAIL_SELECTORS.listSubject) !== null || root.querySelector(GMAIL_SELECTORS.listSnippet) !== null,
+      guardActive: extensionRoot?.shadowRoot?.querySelector(".u-cant-see-me-gmail-guard") !== null,
+    };
   }
 }
 

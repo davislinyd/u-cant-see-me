@@ -70,7 +70,10 @@ export class MaskManager {
         // Gmail can add one independently rendered message while another is
         // already masked, so the adapter receives the current document.
         if (this.adapter.supportsMultipleTargets || !this.activeMasks.has(rule.id)) {
-          this.resolveRule(rule, this.adapter.supportsMultipleTargets ? [document] : roots);
+          // Structural locators are document-relative. Resolving them from a
+          // mutation subtree can reject their stable ancestor and let a broad
+          // fallback bind a visually similar, but wrong, control.
+          this.resolveRule(rule, [document]);
         }
       }
     }

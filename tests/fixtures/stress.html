@@ -1,0 +1,10 @@
+<!doctype html>
+<html><head><meta charset="utf-8" /><title>Mask stress fixture</title>
+<style>.stress-target{display:block;margin:2px;padding:4px}</style></head><body>
+  <h1>Mask stress fixture</h1><main id="stress-list"></main>
+  <script>
+    const list = document.querySelector('#stress-list');
+    for (let i = 0; i < 100; i += 1) { const node = document.createElement('div'); node.id = `stress-${i}`; node.className = 'stress-target'; node.textContent = `Synthetic target ${i}`; list.append(node); }
+    window.runStressMutations = () => { for (let i = 0; i < 1000; i += 1) { const node = document.createElement('span'); node.dataset.stress = String(i); list.append(node); node.remove(); } };
+  </script>
+</body></html>

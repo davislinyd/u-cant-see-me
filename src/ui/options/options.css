@@ -8,13 +8,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, .import-button:
 .eyebrow { color: #636b85; font-size: 11px; font-weight: 700; letter-spacing: .14em; margin: 0 0 6px; }
 h1, h2 { margin: 0; } h1 { font-size: 32px; } h2 { font-size: 18px; }
 .intro, .empty-state, .feedback, .backup-card p, .shortcut-note { color: #636b85; line-height: 1.6; }
-.summary-card, .settings-card, .backup-card, .rule-item { background: #fff; border: 1px solid #e2e5ef; border-radius: 14px; }
+.summary-card, .settings-card, .backup-card, .diagnostics-card, .rule-item { background: #fff; border: 1px solid #e2e5ef; border-radius: 14px; }
 .summary-card { align-items: center; display: flex; justify-content: space-between; margin-top: 28px; padding: 18px 20px; }.summary-card strong { font-size: 26px; }
-.settings-card, .backup-card { margin-top: 16px; padding: 18px 20px; }.setting-row { align-items: center; display: flex; gap: 16px; justify-content: space-between; margin-top: 14px; }.setting-row span { line-height: 1.4; }.shortcut-note { font-size: 13px; margin: 16px 0 0; }
+.settings-card, .backup-card, .diagnostics-card { margin-top: 16px; padding: 18px 20px; }.setting-row { align-items: center; display: flex; gap: 16px; justify-content: space-between; margin-top: 14px; }.setting-row span { line-height: 1.4; }.shortcut-note { font-size: 13px; margin: 16px 0 0; }
 .backup-card button, .import-button, #refresh-status { background: #4b5ee5; color: #fff; display: inline-block; font-weight: 700; margin-right: 8px; }.import-button input { display: none; }
 .section-heading { align-items: center; display: flex; justify-content: space-between; margin-top: 34px; }.section-heading h2 { margin: 0; }
 .rule-filters { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0; }.rule-filters input, .rule-filters select, .rule-controls input, .rule-controls select { border: 1px solid #cfd4e4; border-radius: 7px; min-width: 0; padding: 7px; }
 .rule-list { display: grid; gap: 10px; list-style: none; margin: 14px 0 0; padding: 0; }.rule-item { padding: 14px 16px; }.rule-item strong, .rule-item > span { display: block; }.rule-item > span { color: #636b85; font-size: 12px; margin-top: 4px; }
 .rule-controls { align-items: center; display: grid; gap: 8px; grid-template-columns: repeat(4, auto) minmax(110px, 1fr) minmax(140px, 1fr) repeat(3, auto); margin-top: 12px; }.rule-controls button { background: #eef0f8; color: #303850; }.rule-controls .danger-button { background: #fff0f0; color: #aa2020; }.rule-controls label { color: #636b85; font-size: 11px; }.rule-controls label input { display: block; margin-top: 2px; max-width: 72px; }
 .feedback { min-height: 20px; }
+.diagnostics-card p, #diagnostics-output { color: #636b85; font-size: 12px; line-height: 1.5; }.diagnostics-card pre { background: #f6f7fb; overflow: auto; padding: 10px; white-space: pre-wrap; }
 @media (max-width: 720px) { .options-shell { padding: 28px 16px; }.rule-filters { grid-template-columns: 1fr 1fr; }.rule-controls { grid-template-columns: 1fr 1fr; }.setting-row { align-items: flex-start; flex-direction: column; } }

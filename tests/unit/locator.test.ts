@@ -27,6 +27,47 @@ describe("locator foundation", () => {
     expect(resolution.element).toBeNull();
   });
 
+  it("uses an exact structural path for an unlabelled application control", () => {
+    document.body.innerHTML = `
+      <main><section><div>
+        <button type="button"><svg></svg></button>
+        <button type="button"><svg></svg></button>
+      </div></section></main>
+    `;
+    const target = document.querySelectorAll("button")[1];
+    expect(target).toBeDefined();
+
+    const locator = generateLocator(target as Element);
+    const resolution = resolveLocator(locator);
+
+    expect(locator.primary.kind).toBe("css");
+    expect(locator.primary).toMatchObject({ value: expect.stringContaining("button:nth-of-type(2)") });
+    expect(resolution.element).toBe(target);
+    expect(resolution.confidence).toBeGreaterThanOrEqual(locator.confidenceThreshold);
+  });
+
+  it("anchors an unlabelled control below a stable ancestor across extension root insertion", () => {
+    document.body.innerHTML = `
+      <div id="application-root"><section><button type="button"></button><button type="button"></button></section></div>
+    `;
+    const target = document.querySelectorAll("button")[1];
+    const locator = generateLocator(target as Element);
+
+    document.body.insertAdjacentHTML("afterbegin", '<div id="u-cant-see-me-root"></div>');
+    const resolution = resolveLocator(locator);
+
+    expect(locator.primary).toMatchObject({ value: expect.stringMatching(/^#application-root >/) });
+    expect(resolution.element).toBe(target);
+    expect(resolution.confidence).toBeGreaterThanOrEqual(locator.confidenceThreshold);
+  });
+
+  it("does not fall back to a generic tag for an unresolved control", () => {
+    document.body.innerHTML = '<div id="application-root"><button type="button"></button></div>';
+    const locator = generateLocator(document.querySelector("button") as Element);
+
+    expect(locator.fallbacks.map((strategy) => strategy.kind)).not.toContain("tag");
+  });
+
   it("recovers a replacement after an id change, class change, and wrapper insertion", () => {
     document.body.innerHTML = `
       <main><section id="customer-view">
