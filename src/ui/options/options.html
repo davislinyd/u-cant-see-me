@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>U Cant See Me — Manage masks</title>
+  </head>
+  <body>
+    <main class="options-shell">
+      <header>
+        <p class="eyebrow">U CANT SEE ME</p>
+        <h1>Manage masks</h1>
+        <p class="intro">Persistent rules will be listed here without storing page text or message contents.</p>
+      </header>
+      <section class="summary-card" aria-live="polite">
+        <span>Stored rules</span>
+        <strong id="rule-count">0</strong>
+      </section>
+      <section>
+        <h2>Rules</h2>
+        <p id="empty-state" class="empty-state">目前沒有已儲存的遮罩規則。</p>
+        <ul id="rule-list" class="rule-list"></ul>
+      </section>
+      <p id="feedback" class="feedback" role="status"></p>
+    </main>
+    <script type="module" src="./options.ts"></script>
+  </body>
+</html>

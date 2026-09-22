@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "U Cant See Me",
+  "version": "0.1.0",
+  "description": "Local visual privacy protection for browser-rendered content.",
+  "minimum_chrome_version": "120",
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "contextMenus"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "U Cant See Me",
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

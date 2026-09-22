@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>U Cant See Me</title>
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="popup-header">
+        <div>
+          <p class="eyebrow">U CANT SEE ME</p>
+          <h1>Privacy protection</h1>
+        </div>
+        <span class="status-dot" aria-hidden="true"></span>
+      </header>
+
+      <section class="status-card" aria-live="polite">
+        <div class="status-heading">
+          <span>Protection</span>
+          <strong id="protection-state">Checking…</strong>
+        </div>
+        <p id="status-detail">讀取目前分頁狀態中。</p>
+      </section>
+
+      <button id="select-elements" class="primary-button" type="button">Select elements</button>
+      <button id="reveal-all" class="secondary-button" type="button" disabled>Temporarily reveal all</button>
+
+      <div class="divider"></div>
+
+      <div class="page-count">
+        <span>Masks on this page</span>
+        <strong id="mask-count">0</strong>
+      </div>
+      <button id="manage-masks" class="link-button" type="button">Manage masks</button>
+      <p id="feedback" class="feedback" role="status"></p>
+    </main>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>
