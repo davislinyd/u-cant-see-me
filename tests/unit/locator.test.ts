@@ -26,4 +26,49 @@ describe("locator foundation", () => {
     const resolution = resolveLocator(locator);
     expect(resolution.element).toBeNull();
   });
+
+  it("recovers a replacement after an id change, class change, and wrapper insertion", () => {
+    document.body.innerHTML = `
+      <main><section id="customer-view">
+        <article id="legacy-target" role="region" class="privacy-card stable-card"><span></span></article>
+      </section></main>
+    `;
+    const original = document.querySelector("#legacy-target");
+    expect(original).not.toBeNull();
+    const locator = generateLocator(original as Element);
+
+    document.querySelector("#customer-view")?.replaceChildren(
+      document.createRange().createContextualFragment(`
+        <div class="new-wrapper">
+          <article id="replacement-target" role="region" class="privacy-card refreshed-card"><span></span></article>
+        </div>
+      `),
+    );
+
+    const resolution = resolveLocator(locator);
+    expect(resolution.element?.getAttribute("id")).toBe("replacement-target");
+    expect(resolution.confidence).toBeGreaterThanOrEqual(locator.confidenceThreshold);
+  });
+
+  it("keeps ambiguous replacement candidates unresolved", () => {
+    document.body.innerHTML = `
+      <main><section id="customer-view">
+        <article id="legacy-target" role="region" class="privacy-card stable-card"><span></span></article>
+      </section></main>
+    `;
+    const original = document.querySelector("#legacy-target");
+    expect(original).not.toBeNull();
+    const locator = generateLocator(original as Element);
+
+    document.querySelector("#customer-view")?.replaceChildren(
+      document.createRange().createContextualFragment(`
+        <article id="replacement-one" role="region" class="privacy-card stable-card"><span></span></article>
+        <article id="replacement-two" role="region" class="privacy-card stable-card"><span></span></article>
+      `),
+    );
+
+    const resolution = resolveLocator(locator);
+    expect(resolution.element).toBeNull();
+    expect(resolution.confidence).toBeGreaterThanOrEqual(locator.confidenceThreshold);
+  });
 });

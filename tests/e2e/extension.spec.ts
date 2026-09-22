@@ -88,6 +88,66 @@ test("selects multiple elements, applies each mask style, and restores masks aft
   }
 });
 
+test("self-heals a saved mask through dynamic SPA rendering and route changes", async ({ baseURL }) => {
+  const extensionPath = await createE2eExtension();
+  const context = await chromium.launchPersistentContext("", {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`,
+    ],
+  });
+
+  try {
+    const page = await context.newPage();
+    await page.goto(`${baseURL}/spa.html`);
+    await expect(page.locator("h1")).toHaveText("U Cant See Me SPA fixture");
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker", { timeout: 10_000 });
+    const tabId = await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      return tab?.id;
+    });
+    expect(tabId).toBeDefined();
+
+    await selectAndSave(page, worker, tabId as number, ["#resilient-target"], "black", false, 1);
+
+    await page.locator("#replace-target").click();
+    await expect(page.locator("#resilient-target-v2")).toBeVisible();
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(1);
+
+    await page.locator("#replace-parent").click();
+    await expect(page.locator("#resilient-target-v3")).toBeVisible();
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(1);
+
+    await page.locator("#delay-target").click();
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(0);
+    await expect(page.locator("#resilient-target-delayed")).toBeVisible();
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(1);
+
+    await page.locator("#reorder-list").click();
+    await expect(page.locator(".virtual-list")).toContainText("Row three");
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(1);
+
+    await page.locator("#resize-target").click();
+    await expect.poll(async () => page.locator("[data-resilient-target]").evaluate((target) => (target as HTMLElement).style.width)).toBe("360px");
+    const targetWidth = await page.locator("[data-resilient-target]").evaluate((target) => Math.round(target.getBoundingClientRect().width));
+    await expect.poll(async () => page.locator(".u-cant-see-me-mask-overlay").evaluate((overlay) => Math.round(overlay.getBoundingClientRect().width))).toBe(targetWidth);
+
+    await page.locator("#go-away").click();
+    await expect(page).toHaveURL(`${baseURL}/spa-other`);
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(0);
+
+    await page.locator("#go-back").click();
+    await expect(page).toHaveURL(`${baseURL}/spa.html`);
+    await expect(page.locator("#resilient-target-route")).toBeVisible();
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(1);
+  } finally {
+    await context.close();
+    await rm(extensionPath, { recursive: true, force: true });
+  }
+});
+
 async function createE2eExtension(): Promise<string> {
   const sourcePath = resolve(process.cwd(), "dist");
   const extensionPath = await mkdtemp(resolve(tmpdir(), "u-cant-see-me-e2e-"));

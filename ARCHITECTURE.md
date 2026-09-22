@@ -25,6 +25,8 @@ The extension has four runtime surfaces:
 
 Rules contain a primary strategy, fallbacks, a confidence threshold, and a structural fingerprint. The fingerprint contains tag/role/type, selected stable attributes, class tokens, parent tag structure, and a child-count range. It deliberately excludes `innerText`, `textContent`, email content, password values, and other page data.
 
+The locator engine tries the primary strategy and safe fallbacks in order, scores every candidate against the fingerprint, and accepts only a unique highest-scoring candidate at or above the rule threshold. Stable attributes, class similarity, parent-tag subsequences, and child structure let it recover from an ID change, minor class change, or wrapper insertion. Tied candidates remain unresolved instead of masking an arbitrary element.
+
 URL scopes are represented as exact URL, origin, or escaped wildcard path patterns. User-provided patterns are never evaluated as arbitrary regular expressions.
 
 ## Renderer abstraction
@@ -39,7 +41,9 @@ The contract is isolated in `src/content/renderer/`. The pseudo renderer covers 
 
 ## Route and mutation observation
 
-`RouteObserver` wraps `pushState` and `replaceState` while preserving the original calls, and listens to `popstate`/`hashchange`. `MutationEngine` batches relevant mutations with `requestAnimationFrame` and passes only the batch to the manager. Future recovery work must inspect added subtrees and unresolved rule candidates instead of rescanning `document.querySelectorAll("*")` for every mutation.
+`RouteObserver` wraps `pushState` and `replaceState` while preserving the original calls, and listens to `popstate`/`hashchange`. A route change clears stale masks and re-resolves rules for the new URL scope.
+
+`MutationEngine` batches relevant child-list and structural-attribute mutations with `requestAnimationFrame`. `MaskManager` refreshes healthy active handles, disposes handles whose target or renderer state disappeared, and resolves only unmasked applicable rules against mutation targets and added subtrees. It never performs `document.querySelectorAll("*")` on each mutation. Development builds expose local-only counters at `window.__U_CANT_SEE_ME_DEV_METRICS__` for resolved/unresolved rules, mutation batches, resolver executions, and portal updates; nothing is transmitted externally.
 
 ## Privacy model and future Privacy Gate
 

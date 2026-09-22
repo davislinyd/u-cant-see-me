@@ -20,7 +20,20 @@ export class MutationEngine {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["class", "id", "role", "data-testid", "style"],
+      attributeFilter: [
+        "class",
+        "id",
+        "role",
+        "name",
+        "type",
+        "data-testid",
+        "data-test",
+        "data-qa",
+        "data-cy",
+        "data-u-cant-see-me-renderer",
+        "data-u-cant-see-me-mask-type",
+        "style",
+      ],
     });
   }
 

@@ -27,8 +27,8 @@ The Phase 1 popup starts selection on the active tab. The selection controller s
 
 Fixtures are synthetic. Do not add real emails, passwords, page bodies, screenshots containing private data, or exported user rules to the repository. Tests should assert structural behavior and sanitized status, not persist or print page content.
 
-The E2E fixture is synthetic and includes nested content, an input, flex and grid layouts, and a scroll container. E2E creates a temporary copy of `dist/` and adds host access only to that copy, so production `manifest.json` keeps host access optional.
+The E2E fixtures are synthetic. `basic.html` covers generic selection; `spa.html` covers target and parent replacement, delayed rendering, virtualized-list reorder, resize, and History API route transitions. E2E creates a temporary copy of `dist/` and adds host access only to that copy, so production `manifest.json` keeps host access optional.
 
-## Phase 2 handoff
+## Phase 3 handoff
 
-The next implementation milestone is resilient locator recovery for recreated and reordered DOM nodes, including SPA route transitions and efficient mutation-driven re-resolution. The current generic adapter intentionally does not recover across cross-origin frames or closed shadow roots, and Phase 1 does not provide anti-flash Privacy Gate behavior.
+The next implementation milestone is the Privacy Gate: document-start anti-flash behavior, explicit privacy modes, temporary reveal, and relock lifecycle. The generic adapter intentionally does not recover across cross-origin frames or closed shadow roots.

@@ -9,6 +9,7 @@ export interface LocatorResolution {
 
 export function resolveLocator(locator: ElementLocator, root: ParentNode = document): LocatorResolution {
   const strategies = [locator.primary, ...locator.fallbacks];
+  let bestRejectedConfidence = 0;
 
   for (const strategy of strategies) {
     const candidates = resolveStrategy(strategy, root);
@@ -18,18 +19,20 @@ export function resolveLocator(locator: ElementLocator, root: ParentNode = docum
       .sort((left, right) => right.confidence - left.confidence);
 
     const best = scored[0];
-    if (best) {
+    const runnerUp = scored[1];
+    if (best && (!runnerUp || best.confidence > runnerUp.confidence)) {
       return {
         element: best.element,
         confidence: best.confidence,
         strategy,
       };
     }
+    bestRejectedConfidence = Math.max(bestRejectedConfidence, best?.confidence ?? 0);
   }
 
   return {
     element: null,
-    confidence: 0,
+    confidence: bestRejectedConfidence,
     strategy: null,
   };
 }
@@ -37,12 +40,12 @@ export function resolveLocator(locator: ElementLocator, root: ParentNode = docum
 function resolveStrategy(strategy: LocatorStrategy, root: ParentNode): Element[] {
   switch (strategy.kind) {
     case "id": {
-      const element = root instanceof Document
-        ? root.getElementById(strategy.value)
-        : root.querySelector(`#${escapeCss(strategy.value)}`);
-      return element ? [element] : [];
+      return queryAll(root, `#${escapeCss(strategy.value)}`);
     }
     case "attribute":
+      if (!/^[a-zA-Z_][a-zA-Z0-9_:-]*$/.test(strategy.name)) {
+        return [];
+      }
       return queryAll(root, `[${strategy.name}="${escapeAttribute(strategy.value)}"]`);
     case "role":
       return queryAll(root, `[role="${escapeAttribute(strategy.value)}"]`);
@@ -57,7 +60,8 @@ function resolveStrategy(strategy: LocatorStrategy, root: ParentNode): Element[]
 
 function queryAll(root: ParentNode, selector: string): Element[] {
   try {
-    return [...root.querySelectorAll(selector)];
+    const rootMatches = root instanceof Element && root.matches(selector) ? [root] : [];
+    return [...new Set([...rootMatches, ...root.querySelectorAll(selector)])];
   } catch {
     return [];
   }

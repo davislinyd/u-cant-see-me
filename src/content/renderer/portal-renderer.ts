@@ -1,5 +1,6 @@
 import { MASK_RENDERER_IDS } from "../../shared/constants";
 import type { MaskStyle } from "../../shared/types";
+import { developmentMetrics } from "../development-metrics";
 import type { MaskRenderer, RendererHandle } from "./renderer";
 import { getExtensionRoot } from "./extension-root";
 
@@ -25,6 +26,7 @@ export class PortalRenderer implements MaskRenderer {
     let frameHandle: number | null = null;
     const update = (): void => {
       frameHandle = null;
+      developmentMetrics.recordPortalRendererUpdate();
       if (!element.isConnected) {
         overlay.style.display = "none";
         return;
@@ -57,6 +59,7 @@ export class PortalRenderer implements MaskRenderer {
         attachedAt: Date.now(),
       },
       refresh: update,
+      isHealthy: () => element.isConnected && overlay.isConnected,
       dispose: () => {
         window.removeEventListener("scroll", scheduleUpdate, true);
         window.removeEventListener("resize", scheduleUpdate);

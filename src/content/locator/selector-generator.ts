@@ -38,6 +38,19 @@ function choosePrimaryStrategy(element: Element): LocatorStrategy {
 
 function buildFallbacks(element: Element, primary: LocatorStrategy): LocatorStrategy[] {
   const fallbacks: LocatorStrategy[] = [];
+  for (const attribute of STABLE_ATTRIBUTE_NAMES) {
+    const value = element.getAttribute(attribute);
+    const strategy: LocatorStrategy = { kind: "attribute", name: attribute, value: value ?? "" };
+    if (value && isStableToken(value) && !isSameStrategy(primary, strategy)) {
+      fallbacks.push(strategy);
+    }
+  }
+
+  const role = element.getAttribute("role");
+  if (role && isStableToken(role) && !isSameStrategy(primary, { kind: "role", value: role })) {
+    fallbacks.push({ kind: "role", value: role });
+  }
+
   const name = element.getAttribute("name");
   const type = element.getAttribute("type");
   const tag = element.tagName.toLowerCase();

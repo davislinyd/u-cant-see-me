@@ -24,22 +24,42 @@ export function scoreFingerprint(element: Element, fingerprint: ElementFingerpri
 
   const classTokens = new Set(element.classList);
   if (fingerprint.classTokens.length > 0) {
-    const matched = fingerprint.classTokens.filter((token) => classTokens.has(token)).length;
-    score += Math.round((matched / fingerprint.classTokens.length) * 10);
+    const shared = fingerprint.classTokens.filter((token) => classTokens.has(token)).length;
+    const unionSize = new Set([...fingerprint.classTokens, ...classTokens]).size;
+    score += Math.round((shared / unionSize) * 25);
   }
 
   const parentTags = collectParentTags(element);
   if (fingerprint.parentTags.length > 0) {
-    const matched = fingerprint.parentTags.filter((tag, index) => parentTags[index] === tag).length;
-    score += Math.round((matched / fingerprint.parentTags.length) * 5);
+    const shared = longestCommonSubsequenceLength(fingerprint.parentTags, parentTags);
+    score += Math.round((shared / fingerprint.parentTags.length) * 25);
   }
 
   const childCount = element.children.length;
   if (childCount >= fingerprint.childCountRange.min && childCount <= fingerprint.childCountRange.max) {
-    score += 5;
+    score += 10;
   }
 
   return Math.min(100, score);
+}
+
+function longestCommonSubsequenceLength(left: string[], right: string[]): number {
+  const lengths = Array.from({ length: right.length + 1 }, () => 0);
+
+  for (const leftToken of left) {
+    let diagonal = 0;
+    for (let index = 1; index <= right.length; index += 1) {
+      const previous = lengths[index] ?? 0;
+      if (leftToken === right[index - 1]) {
+        lengths[index] = diagonal + 1;
+      } else {
+        lengths[index] = Math.max(lengths[index - 1] ?? 0, previous);
+      }
+      diagonal = previous;
+    }
+  }
+
+  return lengths[right.length] ?? 0;
 }
 
 function collectParentTags(element: Element): string[] {

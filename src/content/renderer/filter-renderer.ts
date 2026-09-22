@@ -23,6 +23,7 @@ export class FilterRenderer implements MaskRenderer {
         attachedAt: Date.now(),
       },
       refresh: () => undefined,
+      isHealthy: () => element.isConnected && htmlElement.style.filter === `blur(${style.blurRadius ?? 14}px)`,
       dispose: () => {
         htmlElement.style.filter = previousFilter;
       },

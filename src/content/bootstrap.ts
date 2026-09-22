@@ -16,8 +16,8 @@ const maskManager = new MaskManager(adapter);
 const ruleStore = new RuleStore();
 const settingsStore = new SettingsStore();
 const routeObserver = new RouteObserver();
-const mutationEngine = new MutationEngine(() => {
-  maskManager.resolveAndApply(window.location.href);
+const mutationEngine = new MutationEngine((records) => {
+  maskManager.reconcileMutations(window.location.href, records);
 });
 const selectionController = new SelectionController(
   async (elements, style) => saveSelectedElements(elements, style),

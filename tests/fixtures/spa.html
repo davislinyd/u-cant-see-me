@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>U Cant See Me SPA fixture</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 24px; }
+      #controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+      .customer-view { border: 1px solid #ccd2e0; border-radius: 8px; padding: 16px; }
+      .privacy-card { background: #eff3ff; border-radius: 6px; min-height: 84px; padding: 16px; width: 260px; }
+      .new-wrapper { border-left: 4px solid #6b82ea; padding-left: 12px; }
+      .virtual-list { display: flex; gap: 8px; list-style: none; padding: 0; }
+      .virtual-list li { background: #f1f3f7; border-radius: 4px; padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>U Cant See Me SPA fixture</h1>
+      <div id="controls">
+        <button id="replace-target" type="button">Replace target</button>
+        <button id="replace-parent" type="button">Replace parent</button>
+        <button id="delay-target" type="button">Delay target</button>
+        <button id="reorder-list" type="button">Reorder virtual list</button>
+        <button id="resize-target" type="button">Resize target</button>
+        <button id="go-away" type="button">Navigate away</button>
+      </div>
+      <div id="app"></div>
+    </main>
+    <script>
+      const app = document.querySelector("#app");
+      let renderToken = 0;
+      let reversed = false;
+
+      function cardMarkup(id, className, wrapped) {
+        const card = `<article id="${id}" role="region" data-resilient-target="true" class="privacy-card ${className}">
+          <strong>Protected synthetic account</strong><span aria-hidden="true"></span>
+        </article>`;
+        return wrapped ? `<div class="new-wrapper">${card}</div>` : card;
+      }
+
+      function listMarkup() {
+        const items = reversed ? ["three", "two", "one"] : ["one", "two", "three"];
+        return `<ul class="virtual-list">${items.map((item) => `<li>Row ${item}</li>`).join("")}</ul>`;
+      }
+
+      function renderProtected(options = {}) {
+        const {
+          id = "resilient-target",
+          className = "stable-card",
+          wrapped = false,
+          delayed = false,
+        } = options;
+        const token = ++renderToken;
+        app.replaceChildren();
+        if (delayed) {
+          app.textContent = "Loading protected route…";
+          window.setTimeout(() => {
+            if (token === renderToken) {
+              renderProtected({ id, className, wrapped });
+            }
+          }, 180);
+          return;
+        }
+        app.innerHTML = `<section class="customer-view">${cardMarkup(id, className, wrapped)}${listMarkup()}</section>`;
+      }
+
+      function renderAway() {
+        renderToken += 1;
+        app.innerHTML = `<section class="customer-view"><p>Other route</p><button id="go-back" type="button">Return to protected route</button></section>`;
+      }
+
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+        switch (button.id) {
+          case "replace-target":
+            renderProtected({ id: "resilient-target-v2", className: "refreshed-card" });
+            break;
+          case "replace-parent":
+            renderProtected({ id: "resilient-target-v3", className: "refreshed-card", wrapped: true });
+            break;
+          case "delay-target":
+            renderProtected({ id: "resilient-target-delayed", className: "refreshed-card", wrapped: true, delayed: true });
+            break;
+          case "reorder-list":
+            reversed = !reversed;
+            document.querySelector(".virtual-list")?.replaceWith(document.createRange().createContextualFragment(listMarkup()));
+            break;
+          case "resize-target": {
+            const target = document.querySelector("[data-resilient-target]");
+            if (target) target.style.width = "360px";
+            break;
+          }
+          case "go-away":
+            history.pushState({}, "", "/spa-other");
+            renderAway();
+            break;
+          case "go-back":
+            history.pushState({}, "", "/spa.html");
+            renderProtected({ id: "resilient-target-route", className: "refreshed-card", wrapped: true, delayed: true });
+            break;
+        }
+      });
+
+      renderProtected();
+    </script>
+  </body>
+</html>

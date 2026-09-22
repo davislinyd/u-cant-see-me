@@ -2,7 +2,7 @@
 
 U Cant See Me is a Manifest V3 Chromium extension for local visual privacy protection. It is designed for Chrome, Brave, and Microsoft Edge and does not send browsing data to a backend.
 
-The repository implements the Phase 1 generic masking flow from `Plan.md`: typed storage and messaging contracts, generic element selection, four visual mask styles, structural locators, persistent rules, and a reload-tested MV3 UI. Phase 2 will improve locator recovery and SPA resilience.
+The repository implements the Phase 2 resilient masking flow from `Plan.md`: typed storage and messaging contracts, generic element selection, four visual mask styles, structural locators with ambiguity rejection, persistent rules, and mutation-driven SPA recovery.
 
 ## Development
 
@@ -30,5 +30,6 @@ The renderer chain prefers a DOM pseudo-layer for suitable non-static block elem
 
 - Phase 0: architecture and build foundation — implemented.
 - Phase 1: generic element selection and persistent masks — implemented.
-- Phase 2: resilient locator recovery and SPA support — next.
-- Phase 3+: privacy gate, Gmail adapter, management UX, and release hardening — tracked in `Plan.md`.
+- Phase 2: resilient locator recovery and SPA support — implemented.
+- Phase 3: privacy gate, anti-flash protection, and temporary reveal — next.
+- Phase 4+: Gmail adapter, management UX, and release hardening — tracked in `Plan.md`.
