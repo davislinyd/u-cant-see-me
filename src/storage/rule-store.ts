@@ -10,8 +10,16 @@ export class RuleStore {
   }
 
   async save(rule: MaskRule): Promise<void> {
+    await this.saveMany([rule]);
+  }
+
+  async saveMany(incomingRules: MaskRule[]): Promise<void> {
     const rules = await this.list();
-    const nextRules = [...rules.filter((candidate) => candidate.id !== rule.id), rule];
+    const incomingIds = new Set(incomingRules.map((rule) => rule.id));
+    const nextRules = [
+      ...rules.filter((candidate) => !incomingIds.has(candidate.id)),
+      ...incomingRules,
+    ];
     await chrome.storage.local.set({
       [STORAGE_KEYS.rules]: {
         schemaVersion: CURRENT_SCHEMA_VERSION,

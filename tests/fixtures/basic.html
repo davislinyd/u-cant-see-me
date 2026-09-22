@@ -4,12 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>U Cant See Me fixture</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 24px; }
+      .flex-layout, .grid-layout { display: flex; gap: 12px; margin: 16px 0; }
+      .grid-layout { display: grid; grid-template-columns: repeat(2, 180px); }
+      .fixture-card { border: 1px solid #ccd2e0; border-radius: 8px; padding: 16px; }
+      .scroll-box { height: 80px; overflow: auto; border: 1px solid #ccd2e0; }
+      .scroll-box p { margin: 8px; }
+    </style>
   </head>
   <body>
     <main>
       <h1>U Cant See Me fixture</h1>
-      <p id="fixture-paragraph">Synthetic content for extension loading tests.</p>
+      <p id="fixture-paragraph">Synthetic content for extension selection tests.</p>
+      <div id="private-card" class="fixture-card">
+        <strong>Protected card</strong>
+        <p id="nested-private-text">Sensitive-looking synthetic content.</p>
+      </div>
       <button id="fixture-button" type="button">Fixture action</button>
+      <input id="fixture-input" aria-label="Synthetic input" value="safe fixture value" />
+      <div class="flex-layout">
+        <div id="flex-item-one" class="fixture-card">Flex one</div>
+        <div id="flex-item-two" class="fixture-card">Flex two</div>
+      </div>
+      <div class="grid-layout">
+        <div id="grid-item-one" class="fixture-card">Grid one</div>
+        <div id="grid-item-two" class="fixture-card">Grid two</div>
+      </div>
+      <div class="scroll-box" id="scroll-container">
+        <p>Scroll fixture one</p>
+        <p>Scroll fixture two</p>
+        <p>Scroll fixture three</p>
+      </div>
     </main>
   </body>
 </html>

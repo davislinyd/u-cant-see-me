@@ -6,6 +6,7 @@ import { applyWithRendererChain, createRendererChain, type RendererHandle } from
 export class MaskManager {
   private rules: MaskRule[] = [];
   private readonly activeMasks = new Map<string, RendererHandle>();
+  private readonly renderers = createRendererChain();
 
   constructor(private readonly adapter: SiteAdapter) {}
 
@@ -19,8 +20,14 @@ export class MaskManager {
     let unresolvedRules = 0;
 
     for (const rule of applicableRules) {
-      if (this.activeMasks.has(rule.id)) {
+      const existing = this.activeMasks.get(rule.id);
+      if (existing && existing.activeMask.element.isConnected) {
+        existing.refresh();
         continue;
+      }
+      if (existing) {
+        existing.dispose();
+        this.activeMasks.delete(rule.id);
       }
 
       const element = this.adapter.resolve(rule.locator, root);
@@ -29,7 +36,7 @@ export class MaskManager {
         continue;
       }
 
-      const handle = applyWithRendererChain(createRendererChain(), rule.id, element, rule.style);
+      const handle = applyWithRendererChain(this.renderers, rule.id, element, rule.style);
       if (handle) {
         this.activeMasks.set(rule.id, handle);
       } else {

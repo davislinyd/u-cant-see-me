@@ -19,7 +19,7 @@ export function scoreFingerprint(element: Element, fingerprint: ElementFingerpri
   const stableEntries = Object.entries(fingerprint.stableAttributes);
   if (stableEntries.length > 0) {
     const matched = stableEntries.filter(([name, value]) => element.getAttribute(name) === value).length;
-    score += Math.round((matched / stableEntries.length) * 30);
+    score += Math.round((matched / stableEntries.length) * 50);
   }
 
   const classTokens = new Set(element.classList);

@@ -1,16 +1,108 @@
 import { MASK_RENDERER_IDS } from "../../shared/constants";
 import type { MaskStyle } from "../../shared/types";
 import type { MaskRenderer, RendererHandle } from "./renderer";
+import { getExtensionRoot } from "./extension-root";
 
 /** Reserved for event-driven overlay fallback implementation. */
 export class PortalRenderer implements MaskRenderer {
   readonly id = MASK_RENDERER_IDS.portal;
 
   canRender(_element: Element, _style: MaskStyle): boolean {
-    return false;
+    return _element.isConnected;
   }
 
-  apply(_element: Element, _style: MaskStyle): RendererHandle {
-    throw new Error("PortalRenderer is not enabled in the foundation phase.");
+  apply(element: Element, style: MaskStyle): RendererHandle {
+    const { shadowRoot } = getExtensionRoot();
+    ensurePortalStyles(shadowRoot);
+    const overlay = document.createElement("div");
+    overlay.className = "u-cant-see-me-mask-overlay";
+    overlay.dataset.maskType = style.type;
+    overlay.style.setProperty("--u-cant-see-me-blur", `${style.blurRadius ?? 14}px`);
+    overlay.style.setProperty("--u-cant-see-me-mosaic", `${style.mosaicSize ?? 12}px`);
+    overlay.setAttribute("aria-hidden", "true");
+    shadowRoot.append(overlay);
+
+    let frameHandle: number | null = null;
+    const update = (): void => {
+      frameHandle = null;
+      if (!element.isConnected) {
+        overlay.style.display = "none";
+        return;
+      }
+
+      const rect = element.getBoundingClientRect();
+      overlay.style.display = rect.width > 0 && rect.height > 0 ? "block" : "none";
+      overlay.style.left = `${rect.left}px`;
+      overlay.style.top = `${rect.top}px`;
+      overlay.style.width = `${rect.width}px`;
+      overlay.style.height = `${rect.height}px`;
+    };
+    const scheduleUpdate = (): void => {
+      if (frameHandle !== null) {
+        return;
+      }
+      frameHandle = requestAnimationFrame(update);
+    };
+    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleUpdate);
+    resizeObserver?.observe(element);
+    window.addEventListener("scroll", scheduleUpdate, true);
+    window.addEventListener("resize", scheduleUpdate);
+    update();
+
+    return {
+      activeMask: {
+        ruleId: "pending",
+        element,
+        rendererId: this.id,
+        attachedAt: Date.now(),
+      },
+      refresh: update,
+      dispose: () => {
+        window.removeEventListener("scroll", scheduleUpdate, true);
+        window.removeEventListener("resize", scheduleUpdate);
+        resizeObserver?.disconnect();
+        if (frameHandle !== null) {
+          cancelAnimationFrame(frameHandle);
+        }
+        overlay.remove();
+      },
+    };
   }
+}
+
+function ensurePortalStyles(shadowRoot: ShadowRoot): void {
+  if (shadowRoot.querySelector("style[data-u-cant-see-me-portal]") !== null) {
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.dataset.uCantSeeMePortal = "true";
+  style.textContent = `
+    .u-cant-see-me-mask-overlay {
+      display: block;
+      position: fixed;
+      pointer-events: none;
+      z-index: 2147483646;
+    }
+    .u-cant-see-me-mask-overlay[data-mask-type="black"] {
+      background: #000;
+    }
+    .u-cant-see-me-mask-overlay[data-mask-type="white"] {
+      background: #fff;
+    }
+    .u-cant-see-me-mask-overlay[data-mask-type="blur"] {
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(var(--u-cant-see-me-blur, 14px));
+      -webkit-backdrop-filter: blur(var(--u-cant-see-me-blur, 14px));
+    }
+    .u-cant-see-me-mask-overlay[data-mask-type="mosaic"] {
+      background-color: #202020;
+      background-image:
+        linear-gradient(45deg, #f4f4f4 25%, transparent 25%, transparent 75%, #f4f4f4 75%),
+        linear-gradient(45deg, #f4f4f4 25%, transparent 25%, transparent 75%, #f4f4f4 75%);
+      background-position: 0 0, calc(var(--u-cant-see-me-mosaic, 12px) / 2) calc(var(--u-cant-see-me-mosaic, 12px) / 2);
+      background-size: var(--u-cant-see-me-mosaic, 12px) var(--u-cant-see-me-mosaic, 12px);
+    }
+  `;
+  shadowRoot.append(style);
 }

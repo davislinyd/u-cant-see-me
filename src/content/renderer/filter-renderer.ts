@@ -7,10 +7,25 @@ export class FilterRenderer implements MaskRenderer {
   readonly id = MASK_RENDERER_IDS.filter;
 
   canRender(_element: Element, _style: MaskStyle): boolean {
-    return false;
+    return _style.type === "blur" && _element.isConnected && _element instanceof HTMLElement;
   }
 
-  apply(_element: Element, _style: MaskStyle): RendererHandle {
-    throw new Error("FilterRenderer is not enabled in the foundation phase.");
+  apply(element: Element, style: MaskStyle): RendererHandle {
+    const htmlElement = element as HTMLElement;
+    const previousFilter = htmlElement.style.filter;
+    htmlElement.style.filter = `blur(${style.blurRadius ?? 14}px)`;
+
+    return {
+      activeMask: {
+        ruleId: "pending",
+        element,
+        rendererId: this.id,
+        attachedAt: Date.now(),
+      },
+      refresh: () => undefined,
+      dispose: () => {
+        htmlElement.style.filter = previousFilter;
+      },
+    };
   }
 }

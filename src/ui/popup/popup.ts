@@ -1,4 +1,5 @@
 import "./popup.css";
+import { requestHostPermissionForUrl } from "../../background/permissions";
 import type { ExtensionMessage, MessageResponse } from "../../shared/messages";
 
 const stateElement = document.querySelector<HTMLElement>("#protection-state");
@@ -62,12 +63,16 @@ selectButton?.addEventListener("click", async () => {
     return;
   }
 
+  const automaticRestore = tab.url ? await requestHostPermissionForUrl(tab.url) : false;
   const response = await sendRuntimeMessage({ type: "START_SELECTION", tabId: tab.id });
-  showFeedback(response.ok && response.data === false
-    ? "選取控制器將在 Phase 1 啟用。"
-    : response.ok
-      ? "Selection mode started."
-      : response.error);
+  if (!response.ok) {
+    showFeedback(response.error);
+    return;
+  }
+
+  showFeedback(automaticRestore
+    ? "Selection mode started."
+    : "Selection mode started; automatic restore needs site access.");
 });
 
 manageButton?.addEventListener("click", () => {

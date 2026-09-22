@@ -5,6 +5,7 @@ import { PseudoRenderer } from "./pseudo-renderer";
 
 export interface RendererHandle {
   activeMask: ActiveMask;
+  refresh(): void;
   dispose(): void;
 }
 

@@ -6,6 +6,7 @@ export type ExtensionMessage =
   | { type: "START_SELECTION"; tabId?: number }
   | { type: "STOP_SELECTION" }
   | { type: "SAVE_RULE"; rule: MaskRule }
+  | { type: "SAVE_RULES"; rules: MaskRule[] }
   | { type: "REMOVE_RULE"; ruleId: string }
   | { type: "GET_RULES" }
   | { type: "REVEAL_RULE"; ruleId: string; durationMs: number }
@@ -47,6 +48,8 @@ export function isExtensionMessage(value: unknown): value is ExtensionMessage {
         (value.type !== "REVEAL_RULE" || typeof value.durationMs === "number");
     case "SAVE_RULE":
       return isRecord(value.rule) && typeof value.rule.id === "string";
+    case "SAVE_RULES":
+      return Array.isArray(value.rules) && value.rules.every((rule) => isRecord(rule) && typeof rule.id === "string");
   }
 
   return false;

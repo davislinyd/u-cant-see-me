@@ -21,12 +21,14 @@ npm run test:e2e
 4. Choose **Load unpacked** and select this repository's `dist/` directory.
 5. Open the extension popup and options page.
 
-The Phase 0 popup intentionally reports that element selection is a Phase 1 feature. A successful load check confirms the manifest, service worker, extension UI pages, and content-script bundle can coexist; it does not claim that visual masking is complete.
+The Phase 1 popup starts selection on the active tab. The selection controller supports hover feedback, click selection, Shift+Click multi-selection, Alt+Click removal, Enter confirmation, and Escape cancellation. Rules are saved one per element and are re-applied after a page reload when the origin permission is available.
 
 ## Test data policy
 
 Fixtures are synthetic. Do not add real emails, passwords, page bodies, screenshots containing private data, or exported user rules to the repository. Tests should assert structural behavior and sanitized status, not persist or print page content.
 
-## Phase 1 handoff
+The E2E fixture is synthetic and includes nested content, an input, flex and grid layouts, and a scroll container. E2E creates a temporary copy of `dist/` and adds host access only to that copy, so production `manifest.json` keeps host access optional.
 
-The next implementation milestone is a dedicated selection controller, with hover highlighting and keyboard controls, followed by a real renderer handle that can apply and remove opaque visual masks without changing the underlying page text.
+## Phase 2 handoff
+
+The next implementation milestone is resilient locator recovery for recreated and reordered DOM nodes, including SPA route transitions and efficient mutation-driven re-resolution. The current generic adapter intentionally does not recover across cross-origin frames or closed shadow roots, and Phase 1 does not provide anti-flash Privacy Gate behavior.

@@ -1,5 +1,8 @@
 import { RuleStore } from "../storage/rule-store";
 import { isExtensionMessage, type ExtensionMessage, type MessageResponse } from "../shared/messages";
+import { originPatternForUrl } from "../shared/utils";
+import { hasHostPermissionForUrl } from "./permissions";
+import { registerProtectionScript } from "./script-registration";
 
 const ruleStore = new RuleStore();
 
@@ -26,6 +29,12 @@ async function handleBackgroundMessage(message: ExtensionMessage, sender: chrome
       return { ok: true, data: await ruleStore.list() };
     case "SAVE_RULE":
       await ruleStore.save(message.rule);
+      await registerProtectionForSenderTab(sender);
+      await broadcastRulesChanged(sender.tab?.id);
+      return { ok: true };
+    case "SAVE_RULES":
+      await ruleStore.saveMany(message.rules);
+      await registerProtectionForSenderTab(sender);
       await broadcastRulesChanged(sender.tab?.id);
       return { ok: true };
     case "REMOVE_RULE":
@@ -35,8 +44,9 @@ async function handleBackgroundMessage(message: ExtensionMessage, sender: chrome
     case "GET_PAGE_STATUS":
       return await getPageStatusFromTab(message, sender);
     case "START_SELECTION":
-      return await forwardToTab(message.tabId, { type: "START_SELECTION" });
+      return await startSelection(message.tabId);
     case "STOP_SELECTION":
+      return await forwardToTab(sender.tab?.id, message);
     case "REVEAL_RULE":
     case "REMASK_RULE":
     case "RULES_CHANGED":
@@ -61,7 +71,46 @@ async function forwardToTab(tabId: number | undefined, message: ExtensionMessage
   try {
     return await chrome.tabs.sendMessage(tabId, message);
   } catch {
-    return { ok: true, data: undefined };
+    return { ok: false, error: "The current page is not available to the extension." };
+  }
+}
+
+async function startSelection(tabId: number | undefined): Promise<MessageResponse> {
+  if (tabId === undefined) {
+    return { ok: false, error: "No active tab is available." };
+  }
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["content.js"],
+    });
+  } catch {
+    return { ok: false, error: "This page cannot be selected. Try a normal http(s) webpage." };
+  }
+
+  const response = await forwardToTab(tabId, { type: "START_SELECTION" });
+  if (response.ok) {
+    return response;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  return forwardToTab(tabId, { type: "START_SELECTION" });
+}
+
+async function registerProtectionForSenderTab(sender: chrome.runtime.MessageSender): Promise<void> {
+  const url = sender.tab?.url;
+  if (!url || !(await hasHostPermissionForUrl(url))) {
+    return;
+  }
+
+  const origin = originPatternForUrl(url);
+  if (origin) {
+    try {
+      await registerProtectionScript(origin);
+    } catch {
+      // ActiveTab access can be temporary; the rule remains safely stored.
+    }
   }
 }
 
