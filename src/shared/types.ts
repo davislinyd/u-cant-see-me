@@ -48,6 +48,27 @@ export interface MaskRule {
   scope: SiteScope;
   locator: ElementLocator;
   style: MaskStyle;
+  gmailTarget?: GmailMaskTarget;
+}
+
+/**
+ * Gmail identities are rendered-DOM/route implementation details only.  Text
+ * from subjects, snippets, and message bodies is deliberately not persisted.
+ */
+export interface GmailMaskTarget {
+  threadId: string;
+  routeId?: string;
+  messageId?: string;
+  maskThreadSubject: boolean;
+  maskMessageBody: boolean;
+  maskCollapsedPreview: boolean;
+  maskListSubject: boolean;
+  maskListSnippet: boolean;
+}
+
+export interface AdapterResolution {
+  elements: Element[];
+  complete: boolean;
 }
 
 export interface ActiveMask {
@@ -96,9 +117,10 @@ export interface SiteLocation {
 export interface SiteAdapter {
   readonly id: string;
   readonly displayName: string;
-  matches(location: SiteLocation): boolean;
+  matches(location: SiteLocation, document?: Document): boolean;
   createLocator(element: Element): ElementLocator;
-  resolve(locator: ElementLocator, root?: ParentNode): Element | null;
+  resolve(rule: MaskRule, root?: ParentNode): AdapterResolution;
+  readonly supportsMultipleTargets?: boolean;
 }
 
 export type PageProtectionState =
@@ -113,4 +135,5 @@ export interface PageStatus {
   applicableRules: number;
   activeMasks: number;
   unresolvedRules: number;
+  adapterId?: string;
 }

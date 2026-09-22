@@ -1,6 +1,7 @@
 import "./popup.css";
 import { requestHostPermissionForUrl } from "../../background/permissions";
 import type { ExtensionMessage, MessageResponse } from "../../shared/messages";
+import type { MaskType } from "../../shared/types";
 
 const stateElement = document.querySelector<HTMLElement>("#protection-state");
 const detailElement = document.querySelector<HTMLElement>("#status-detail");
@@ -9,6 +10,8 @@ const feedbackElement = document.querySelector<HTMLElement>("#feedback");
 const selectButton = document.querySelector<HTMLButtonElement>("#select-elements");
 const revealButton = document.querySelector<HTMLButtonElement>("#reveal-all");
 const manageButton = document.querySelector<HTMLButtonElement>("#manage-masks");
+const gmailProtection = document.querySelector<HTMLElement>("#gmail-protection");
+const protectGmailButton = document.querySelector<HTMLButtonElement>("#protect-gmail");
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -24,6 +27,9 @@ async function loadStatus(): Promise<void> {
   if (tab?.id === undefined) {
     updateStatus("No active page", "目前沒有可讀取的分頁。", 0);
     return;
+  }
+  if (gmailProtection) {
+    gmailProtection.hidden = !isGmailUrl(tab.url);
   }
 
   try {
@@ -79,6 +85,32 @@ selectButton?.addEventListener("click", async () => {
     : "Selection mode started; automatic restore needs site access.");
 });
 
+protectGmailButton?.addEventListener("click", async () => {
+  const tab = await getActiveTab();
+  if (tab?.id === undefined || !tab.url) {
+    showFeedback("找不到可操作的 Gmail 分頁。");
+    return;
+  }
+  await requestHostPermissionForUrl(tab.url);
+  const style = document.querySelector<HTMLSelectElement>("#gmail-mask-style")?.value as MaskType | undefined;
+  const response = await sendRuntimeMessage({
+    type: "CREATE_GMAIL_RULE",
+    tabId: tab.id,
+    style: { type: style ?? "black" },
+    target: {
+      maskThreadSubject: isChecked("#gmail-thread-subject"),
+      maskMessageBody: isChecked("#gmail-message-body"),
+      maskCollapsedPreview: isChecked("#gmail-collapsed-preview"),
+      maskListSubject: isChecked("#gmail-list-subject"),
+      maskListSnippet: isChecked("#gmail-list-snippet"),
+    },
+  });
+  showFeedback(response.ok ? "Gmail protection saved." : response.error);
+  if (response.ok) {
+    await loadStatus();
+  }
+});
+
 revealButton?.addEventListener("click", async () => {
   const tab = await getActiveTab();
   if (tab?.id === undefined) {
@@ -101,3 +133,17 @@ manageButton?.addEventListener("click", () => {
 });
 
 void loadStatus();
+
+function isGmailUrl(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const hostname = new URL(value).hostname;
+    return hostname === "mail.google.com" || hostname.endsWith(".mail.google.com");
+  } catch {
+    return false;
+  }
+}
+
+function isChecked(selector: string): boolean {
+  return document.querySelector<HTMLInputElement>(selector)?.checked === true;
+}

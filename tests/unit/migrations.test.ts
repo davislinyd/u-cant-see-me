@@ -27,4 +27,24 @@ describe("storage migrations", () => {
     expect(result.rules).toHaveLength(1);
     expect(result.rules[0]?.id).toBe("rule_1");
   });
+
+  it("accepts Gmail rules containing IDs and options, but rejects malformed Gmail targets", () => {
+    const baseRule = {
+      id: "gmail_rule",
+      schemaVersion: 1,
+      enabled: true,
+      createdAt: 1,
+      updatedAt: 1,
+      scope: { kind: "origin", origin: "https://mail.google.com" },
+      locator: { primary: { kind: "tag", value: "main" }, fallbacks: [], fingerprint: {}, confidenceThreshold: 80 },
+      style: { type: "black" },
+    };
+    const valid = {
+      ...baseRule,
+      gmailTarget: { threadId: "thread_alpha1", maskThreadSubject: true, maskMessageBody: true, maskCollapsedPreview: true, maskListSubject: true, maskListSnippet: true },
+    };
+    const invalid = { ...baseRule, id: "broken_gmail", gmailTarget: { threadId: "thread_alpha1" } };
+
+    expect(migrateStoredSchema({ rules: [valid, invalid] }).rules).toEqual([valid]);
+  });
 });

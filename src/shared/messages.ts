@@ -1,5 +1,5 @@
 import { MESSAGE_TYPES } from "./constants";
-import type { MaskRule, PageStatus, TemporaryRevealState } from "./types";
+import type { GmailMaskTarget, MaskRule, MaskStyle, PageStatus, TemporaryRevealState } from "./types";
 import { isRecord } from "./utils";
 
 export type ExtensionMessage =
@@ -14,7 +14,10 @@ export type ExtensionMessage =
   | { type: "REMASK_RULE"; ruleId: string; tabId?: number }
   | { type: "RELOCK_ALL" }
   | { type: "RULES_CHANGED" }
-  | { type: "GET_PAGE_STATUS" };
+  | { type: "GET_PAGE_STATUS" }
+  | { type: "CREATE_GMAIL_RULE"; target: GmailRuleOptions; style: MaskStyle; tabId?: number };
+
+export type GmailRuleOptions = Omit<GmailMaskTarget, "threadId" | "messageId">;
 
 export type MessageData =
   | undefined
@@ -59,7 +62,21 @@ export function isExtensionMessage(value: unknown): value is ExtensionMessage {
       return isRecord(value.rule) && typeof value.rule.id === "string";
     case "SAVE_RULES":
       return Array.isArray(value.rules) && value.rules.every((rule) => isRecord(rule) && typeof rule.id === "string");
+    case "CREATE_GMAIL_RULE":
+      return isGmailRuleOptions(value.target) && isRecord(value.style) &&
+        typeof value.style.type === "string" && (value.tabId === undefined || typeof value.tabId === "number");
   }
 
   return false;
+}
+
+function isGmailRuleOptions(value: unknown): value is GmailRuleOptions {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return typeof value.maskThreadSubject === "boolean" &&
+    typeof value.maskMessageBody === "boolean" &&
+    typeof value.maskCollapsedPreview === "boolean" &&
+    typeof value.maskListSubject === "boolean" &&
+    typeof value.maskListSnippet === "boolean";
 }

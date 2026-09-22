@@ -204,6 +204,55 @@ test("guards document start, then supports temporary reveal, relock, and print p
   }
 });
 
+test("protects synthetic Gmail surfaces through reload, route changes, replacement, and unresolved guard", async ({ baseURL }) => {
+  const extensionPath = await createE2eExtension();
+  const context = await chromium.launchPersistentContext("", {
+    headless: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+
+  try {
+    const page = await context.newPage();
+    await page.goto(`${baseURL}/gmail-multi-message-thread.html#inbox/thread_alpha1`);
+    const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker", { timeout: 10_000 });
+    const tabId = await worker.evaluate(async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id);
+    expect(tabId).toBeDefined();
+    await worker.evaluate(async (currentTabId) => {
+      await chrome.scripting.executeScript({ target: { tabId: currentTabId }, files: ["content.js"] });
+      return chrome.tabs.sendMessage(currentTabId, {
+        type: "CREATE_GMAIL_RULE",
+        style: { type: "black" },
+        target: { maskThreadSubject: true, maskMessageBody: true, maskCollapsedPreview: true, maskListSubject: true, maskListSnippet: true },
+      });
+    }, tabId as number);
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(4);
+
+    await page.reload();
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(4);
+
+    await page.evaluate(() => {
+      history.pushState({}, "", "#inbox");
+      document.body.innerHTML = `<main role="main"><div data-thread-id="thread_alpha1"><span data-gmail-list-subject>fixture list subject</span><span data-gmail-list-snippet>fixture list snippet</span></div></main>`;
+    });
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(2);
+
+    await page.evaluate(() => {
+      history.pushState({}, "", "#inbox/thread_alpha1");
+      document.body.innerHTML = `<main data-thread-id="thread_alpha1"><h2 data-gmail-thread-subject>fixture subject replacement</h2><article data-message-id="message_one01"><div data-gmail-message-body>one replacement</div></article><article data-message-id="message_two02"><div data-gmail-message-body>two replacement</div></article><article data-message-id="message_three3"><div data-gmail-message-body>three replacement</div></article></main>`;
+    });
+    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(4);
+
+    await page.evaluate(() => {
+      document.body.innerHTML = `<main data-thread-id="thread_alpha1"><h2 data-gmail-thread-subject>fixture unresolved subject</h2></main>`;
+    });
+    await expect(page.locator("[data-u-cant-see-me-owned]").locator(".u-cant-see-me-gmail-guard")).toBeVisible();
+  } finally {
+    await context.close();
+    await rm(extensionPath, { recursive: true, force: true });
+  }
+});
+
 async function createE2eExtension(): Promise<string> {
   const sourcePath = resolve(process.cwd(), "dist");
   const extensionPath = await mkdtemp(resolve(tmpdir(), "u-cant-see-me-e2e-"));

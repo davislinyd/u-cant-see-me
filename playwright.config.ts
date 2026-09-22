@@ -3,7 +3,9 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "tests/e2e",
   timeout: 30_000,
-  fullyParallel: true,
+  // Each test starts an unpacked extension and targets its active window.
+  // Serial execution avoids Chromium extension-window focus races.
+  fullyParallel: false,
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:4173",

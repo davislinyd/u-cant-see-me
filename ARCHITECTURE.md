@@ -19,7 +19,9 @@ The extension has four runtime surfaces:
 
 ## Site adapters
 
-`SiteAdapter` separates site-specific matching and resolution from the generic engine. `GenericAdapter` currently delegates to the structural locator engine. `GmailAdapter` is an explicit stub so Gmail selectors and privacy behavior can be added under `src/adapters/gmail/` without scattering special cases through generic code.
+`SiteAdapter` separates site-specific matching and resolution from the generic engine. `GenericAdapter` delegates to the structural locator engine. `GmailAdapter` resolves a rule into one or more page elements, allowing conversation subjects, selected message bodies, collapsed previews, and list/search surfaces to be masked without Gmail selectors entering the generic engine. Its versioned rendered-DOM selector profile, ID readers, route parser, thread/message/list resolvers, and fail-closed guard all live under `src/adapters/gmail/`.
+
+Gmail rules store opaque rendered IDs (`threadId`, optional route ID, and optional `messageId`) plus booleans for each visual surface. They never store subject, snippet, preview, or body text. When a route identifies a protected thread but required DOM identities/surfaces cannot be resolved, `GmailPrivacyGuard` owns an extension Shadow DOM full-page guard with Retry and runtime-only temporary reveal. It is released only when the protected Gmail rule resolves; generic unresolved-rule release behavior is not used as a Gmail fallback.
 
 ## Locator model
 
@@ -43,7 +45,7 @@ The contract is isolated in `src/content/renderer/`. The pseudo renderer covers 
 
 `RouteObserver` wraps `pushState` and `replaceState` while preserving the original calls, and listens to `popstate`/`hashchange`. A route change clears stale masks and re-resolves rules for the new URL scope.
 
-`MutationEngine` batches relevant child-list and structural-attribute mutations with `requestAnimationFrame`. `MaskManager` refreshes healthy active handles, disposes handles whose target or renderer state disappeared, and resolves only unmasked applicable rules against mutation targets and added subtrees. It never performs `document.querySelectorAll("*")` on each mutation. Development builds expose local-only counters at `window.__U_CANT_SEE_ME_DEV_METRICS__` for resolved/unresolved rules, mutation batches, resolver executions, and portal updates; nothing is transmitted externally.
+`MutationEngine` batches relevant child-list and structural-attribute mutations with `requestAnimationFrame`. `MaskManager` refreshes healthy active handles, disposes handles whose target or renderer state disappeared, and resolves generic rules against mutation targets and added subtrees. Multi-target adapters re-resolve their bounded, adapter-owned targets from the current document so an expanded Gmail message is added without losing siblings. It never performs `document.querySelectorAll("*")` on each mutation. Development builds expose local-only counters at `window.__U_CANT_SEE_ME_DEV_METRICS__` for resolved/unresolved rules, mutation batches, resolver executions, and portal updates; nothing is transmitted externally.
 
 ## Privacy model and future Privacy Gate
 

@@ -1,5 +1,5 @@
 import { CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS } from "../shared/constants";
-import type { ExtensionSettings, MaskRule, StoredSchema } from "../shared/types";
+import type { ExtensionSettings, GmailMaskTarget, MaskRule, StoredSchema } from "../shared/types";
 import { isRecord } from "../shared/utils";
 
 export interface StoredRulesEnvelope {
@@ -82,5 +82,19 @@ function isMaskRule(value: unknown): value is MaskRule {
     typeof value.updatedAt === "number" &&
     isRecord(value.scope) &&
     isRecord(value.locator) &&
-    isRecord(value.style);
+    isRecord(value.style) &&
+    (value.gmailTarget === undefined || isGmailMaskTarget(value.gmailTarget));
+}
+
+function isGmailMaskTarget(value: unknown): value is GmailMaskTarget {
+  if (!isRecord(value) || typeof value.threadId !== "string" || value.threadId.length === 0) {
+    return false;
+  }
+  return (value.routeId === undefined || typeof value.routeId === "string") &&
+    (value.messageId === undefined || typeof value.messageId === "string") &&
+    typeof value.maskThreadSubject === "boolean" &&
+    typeof value.maskMessageBody === "boolean" &&
+    typeof value.maskCollapsedPreview === "boolean" &&
+    typeof value.maskListSubject === "boolean" &&
+    typeof value.maskListSnippet === "boolean";
 }

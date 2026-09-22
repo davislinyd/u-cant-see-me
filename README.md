@@ -2,7 +2,7 @@
 
 U Cant See Me is a Manifest V3 Chromium extension for local visual privacy protection. It is designed for Chrome, Brave, and Microsoft Edge and does not send browsing data to a backend.
 
-The repository implements the Phase 3 privacy-critical masking flow from `Plan.md`: typed storage and messaging contracts, generic selection, persistent rules with SPA recovery, document-start Privacy Gate protection, temporary reveal, relock controls, and print concealment.
+The repository implements the Phase 4 privacy-critical masking flow from `Plan.md`: typed storage and messaging contracts, generic selection, persistent rules with SPA recovery, document-start Privacy Gate protection, temporary reveal, relock controls, print concealment, and Gmail-specific per-message masking.
 
 ## Development
 
@@ -18,7 +18,7 @@ Load the generated `dist/` directory as an unpacked extension from `chrome://ext
 
 ## Privacy boundary
 
-The foundation stores only schema-versioned rules, URLs/scopes, and structural locator metadata. It does not persist `innerText`, `textContent`, input values, passwords, email bodies, or subjects. There is no backend, analytics, Gmail API integration, remote code, or third-party tracking.
+The extension stores only schema-versioned rules, URLs/scopes, structural locator metadata, and Gmail rendered-DOM/route IDs. It does not persist `innerText`, `textContent`, input values, passwords, email bodies, snippets, or subjects. There is no backend, analytics, Gmail API integration, OAuth, remote code, or third-party tracking.
 
 The production manifest does not grant host permissions by default. Selecting on the current page uses `activeTab`; the popup then requests the smallest origin permission needed for automatic restore. When that permission is granted, saving a rule registers the content script persistently at `document_start` for that origin. If access is denied, the rule remains local but automatic restore on a later page load is unavailable.
 
@@ -30,11 +30,13 @@ For permitted origins with saved rules, the document-start content script instal
 
 Temporary reveal is runtime-only and supports 5, 10, 30, or 60 seconds. It is re-masked on expiry and, by default, on navigation, window blur, or tab deactivation. Print events conceal active protected elements without modifying stored rules or page text. Strict Mask is optional and blocks pointer interaction and copy events originating in active masked targets.
 
+On Gmail, the popup offers a local **Protect this email** action. It derives only the rendered thread ID and can mask the conversation subject, message bodies, collapsed previews, and matching inbox/search subjects and snippets. A rule can additionally include a message ID, so sibling message bodies remain visible. Gmail selectors, route parsing, resolvers, and the Gmail-only fail-closed guard are isolated under `src/adapters/gmail/`. If a protected Gmail route cannot be structurally verified, the guard remains visible with Retry and a runtime-only temporary-reveal option; it never silently falls back to plaintext.
+
 ## Scope and roadmap
 
 - Phase 0: architecture and build foundation — implemented.
 - Phase 1: generic element selection and persistent masks — implemented.
 - Phase 2: resilient locator recovery and SPA support — implemented.
 - Phase 3: privacy gate, anti-flash protection, and temporary reveal — implemented.
-- Phase 4: Gmail adapter and per-message privacy protection — next.
+- Phase 4: Gmail adapter and per-message privacy protection — implemented.
 - Phase 5+: management UX and release hardening — tracked in `Plan.md`.

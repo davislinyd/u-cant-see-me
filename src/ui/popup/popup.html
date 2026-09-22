@@ -24,6 +24,23 @@
       </section>
 
       <button id="select-elements" class="primary-button" type="button">Select elements</button>
+      <section id="gmail-protection" class="gmail-protection" hidden>
+        <h2>Protect this email</h2>
+        <label><input id="gmail-thread-subject" type="checkbox" checked /> Conversation subject</label>
+        <label><input id="gmail-message-body" type="checkbox" checked /> Message body</label>
+        <label><input id="gmail-collapsed-preview" type="checkbox" checked /> Collapsed preview</label>
+        <label><input id="gmail-list-subject" type="checkbox" checked /> Inbox/search subject</label>
+        <label><input id="gmail-list-snippet" type="checkbox" checked /> Inbox/search snippet</label>
+        <label class="gmail-style">Mask style
+          <select id="gmail-mask-style" aria-label="Gmail mask style">
+            <option value="black">Black</option>
+            <option value="white">White</option>
+            <option value="blur">Blur</option>
+            <option value="mosaic">Mosaic</option>
+          </select>
+        </label>
+        <button id="protect-gmail" class="primary-button" type="button">Protect</button>
+      </section>
       <button id="reveal-all" class="secondary-button" type="button" disabled>Temporarily reveal all</button>
 
       <div class="divider"></div>

@@ -6,7 +6,8 @@ import { applyWithRendererChain, createRendererChain, type RendererHandle } from
 
 export class MaskManager {
   private rules: MaskRule[] = [];
-  private readonly activeMasks = new Map<string, RendererHandle>();
+  private readonly activeMasks = new Map<string, Map<Element, RendererHandle>>();
+  private readonly completeRuleIds = new Set<string>();
   private readonly renderers = createRendererChain();
   private temporarilyRevealedRuleIds = new Set<string>();
 
@@ -18,10 +19,11 @@ export class MaskManager {
 
   setTemporarilyRevealed(ruleIds: Set<string>): void {
     this.temporarilyRevealedRuleIds = new Set(ruleIds);
-    for (const [ruleId, handle] of this.activeMasks) {
+    for (const [ruleId, handles] of this.activeMasks) {
       if (this.temporarilyRevealedRuleIds.has(ruleId)) {
-        handle.dispose();
+        disposeHandles(handles);
         this.activeMasks.delete(ruleId);
+        this.completeRuleIds.delete(ruleId);
       }
     }
   }
@@ -36,16 +38,6 @@ export class MaskManager {
     this.disposeInactiveMasks(maskableRules);
 
     for (const rule of maskableRules) {
-      const existing = this.activeMasks.get(rule.id);
-      if (existing?.isHealthy()) {
-        existing.refresh();
-        continue;
-      }
-      if (existing) {
-        existing.dispose();
-        this.activeMasks.delete(rule.id);
-      }
-
       this.resolveRule(rule, [root]);
     }
 
@@ -58,20 +50,27 @@ export class MaskManager {
     const maskableRules = this.maskableRules(applicableRules);
     this.disposeInactiveMasks(maskableRules);
 
-    for (const [ruleId, handle] of this.activeMasks) {
-      if (!handle.isHealthy()) {
-        handle.dispose();
+    for (const [ruleId, handles] of this.activeMasks) {
+      for (const [element, handle] of handles) {
+        if (!handle.isHealthy()) {
+          handle.dispose();
+          handles.delete(element);
+        } else {
+          handle.refresh();
+        }
+      }
+      if (handles.size === 0) {
         this.activeMasks.delete(ruleId);
-      } else {
-        handle.refresh();
       }
     }
 
     const roots = rootsFromMutations(records);
     if (roots.length > 0) {
       for (const rule of maskableRules) {
-        if (!this.activeMasks.has(rule.id)) {
-          this.resolveRule(rule, roots);
+        // Gmail can add one independently rendered message while another is
+        // already masked, so the adapter receives the current document.
+        if (this.adapter.supportsMultipleTargets || !this.activeMasks.has(rule.id)) {
+          this.resolveRule(rule, this.adapter.supportsMultipleTargets ? [document] : roots);
         }
       }
     }
@@ -80,14 +79,15 @@ export class MaskManager {
   }
 
   clear(): void {
-    for (const handle of this.activeMasks.values()) {
-      handle.dispose();
+    for (const handles of this.activeMasks.values()) {
+      disposeHandles(handles);
     }
     this.activeMasks.clear();
+    this.completeRuleIds.clear();
   }
 
   getActiveMasks(): ActiveMask[] {
-    return [...this.activeMasks.values()].map((handle) => handle.activeMask);
+    return [...this.activeMasks.values()].flatMap((handles) => [...handles.values()].map((handle) => handle.activeMask));
   }
 
   private applicableRules(href: string): MaskRule[] {
@@ -98,35 +98,42 @@ export class MaskManager {
     return applicableRules.filter((rule) => !this.temporarilyRevealedRuleIds.has(rule.id));
   }
 
+  isRuleResolved(ruleId: string): boolean {
+    return this.completeRuleIds.has(ruleId);
+  }
+
+  applicableRulesForPage(href: string): MaskRule[] {
+    return this.applicableRules(href);
+  }
+
   private resolveRule(rule: MaskRule, roots: ParentNode[]): boolean {
+    let complete = false;
     for (const root of roots) {
       developmentMetrics.recordResolverExecution();
-      const element = this.adapter.resolve(rule.locator, root);
-      if (!element) {
-        continue;
-      }
-
-      const handle = applyWithRendererChain(this.renderers, rule.id, element, rule.style);
-      if (handle) {
-        this.activeMasks.set(rule.id, handle);
-        return true;
+      const resolution = this.adapter.resolve(rule, root);
+      complete ||= resolution.complete;
+      this.syncRuleElements(rule, resolution.elements);
+      if (this.adapter.supportsMultipleTargets) {
+        this.setRuleCompleteness(rule.id, resolution.complete);
+        return resolution.complete;
       }
     }
-
-    return false;
+    this.setRuleCompleteness(rule.id, complete);
+    return complete;
   }
 
   private createStatus(applicableRules: MaskRule[]): PageStatus {
     const maskableRules = this.maskableRules(applicableRules);
-    const activeMasks = maskableRules.filter((rule) => this.activeMasks.has(rule.id)).length;
-    const unresolvedRules = maskableRules.length - activeMasks;
+    const resolvedRules = maskableRules.filter((rule) => this.completeRuleIds.has(rule.id)).length;
+    const activeMasks = [...this.activeMasks.values()].reduce((count, handles) => count + handles.size, 0);
+    const unresolvedRules = maskableRules.length - resolvedRules;
     developmentMetrics.recordResolution(activeMasks, unresolvedRules);
     return {
       state: applicableRules.length === 0
         ? "no-masks"
         : unresolvedRules > 0
           ? "unresolved"
-          : activeMasks === maskableRules.length
+          : resolvedRules === maskableRules.length
             ? "protected"
             : "partially-protected",
       applicableRules: applicableRules.length,
@@ -137,12 +144,55 @@ export class MaskManager {
 
   private disposeInactiveMasks(applicableRules: MaskRule[]): void {
     const activeRuleIds = new Set(applicableRules.map((rule) => rule.id));
-    for (const [ruleId, handle] of this.activeMasks) {
+    for (const [ruleId, handles] of this.activeMasks) {
       if (!activeRuleIds.has(ruleId)) {
-        handle.dispose();
+        disposeHandles(handles);
         this.activeMasks.delete(ruleId);
+        this.completeRuleIds.delete(ruleId);
       }
     }
+  }
+
+  private syncRuleElements(rule: MaskRule, elements: Element[]): void {
+    const nextElements = new Set(elements.filter((element) => element.isConnected));
+    const handles = this.activeMasks.get(rule.id) ?? new Map<Element, RendererHandle>();
+    for (const [element, handle] of handles) {
+      if (!nextElements.has(element)) {
+        handle.dispose();
+        handles.delete(element);
+      }
+    }
+    for (const element of nextElements) {
+      const existing = handles.get(element);
+      if (existing?.isHealthy()) {
+        existing.refresh();
+        continue;
+      }
+      existing?.dispose();
+      const handle = applyWithRendererChain(this.renderers, rule.id, element, rule.style);
+      if (handle) {
+        handles.set(element, handle);
+      }
+    }
+    if (handles.size > 0) {
+      this.activeMasks.set(rule.id, handles);
+    } else {
+      this.activeMasks.delete(rule.id);
+    }
+  }
+
+  private setRuleCompleteness(ruleId: string, complete: boolean): void {
+    if (complete) {
+      this.completeRuleIds.add(ruleId);
+    } else {
+      this.completeRuleIds.delete(ruleId);
+    }
+  }
+}
+
+function disposeHandles(handles: Map<Element, RendererHandle>): void {
+  for (const handle of handles.values()) {
+    handle.dispose();
   }
 }
 

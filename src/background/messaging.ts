@@ -53,6 +53,8 @@ async function handleBackgroundMessage(message: ExtensionMessage, sender: chrome
     case "REVEAL_RULE":
     case "REMASK_RULE":
       return forwardToTab(message.tabId ?? sender.tab?.id, message);
+    case "CREATE_GMAIL_RULE":
+      return forwardToTab(message.tabId ?? sender.tab?.id, message);
     case "RELOCK_ALL":
     case "RULES_CHANGED":
       return { ok: true };

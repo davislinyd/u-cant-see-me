@@ -42,6 +42,7 @@ export const MESSAGE_TYPES = [
   "RELOCK_ALL",
   "RULES_CHANGED",
   "GET_PAGE_STATUS",
+  "CREATE_GMAIL_RULE",
 ] as const;
 
 export const MASK_RENDERER_IDS = {

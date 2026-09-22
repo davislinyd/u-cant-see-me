@@ -1,8 +1,10 @@
 import { getSiteAdapter } from "../adapters/site-adapter";
+import { GmailAdapter } from "../adapters/gmail/gmail-adapter";
+import { GmailPrivacyGuard } from "../adapters/gmail/gmail-guard";
 import { RuleStore } from "../storage/rule-store";
 import { SettingsStore } from "../storage/settings-store";
 import { CONTENT_READY_ATTRIBUTE, CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS, STORAGE_KEYS } from "../shared/constants";
-import { isExtensionMessage, type ExtensionMessage, type MessageResponse } from "../shared/messages";
+import { isExtensionMessage, type ExtensionMessage, type GmailRuleOptions, type MessageResponse } from "../shared/messages";
 import type { ExtensionSettings, MaskRule, MaskStyle, PageStatus } from "../shared/types";
 import { createId } from "../shared/utils";
 import { generateLocator } from "./locator/selector-generator";
@@ -15,7 +17,7 @@ import { SelectionController } from "./selection-controller";
 import { StrictMaskController } from "./strict-mask-controller";
 import { TemporaryRevealController } from "./temporary-reveal-controller";
 
-const adapter = getSiteAdapter(window.location.href);
+const adapter = getSiteAdapter(window.location.href, document);
 const maskManager = new MaskManager(adapter);
 const ruleStore = new RuleStore();
 const settingsStore = new SettingsStore();
@@ -37,6 +39,15 @@ const selectionController = new SelectionController(
 let defaultMaskStyle: MaskStyle = { ...DEFAULT_SETTINGS.defaultMaskStyle };
 let currentSettings = { ...DEFAULT_SETTINGS, defaultMaskStyle: { ...DEFAULT_SETTINGS.defaultMaskStyle } };
 let rulesReady = false;
+const gmailGuard = adapter instanceof GmailAdapter
+  ? new GmailPrivacyGuard(
+    () => void currentStatus(),
+    () => {
+      temporaryRevealController.reveal(maskManager.applicableRuleIds(window.location.href), 10_000);
+      void currentStatus();
+    },
+  )
+  : null;
 
 export function currentStatus(): PageStatus {
   maskManager.setTemporarilyRevealed(temporaryRevealController.revealedRuleIds());
@@ -82,7 +93,7 @@ async function saveSelectedElements(elements: Element[], style: MaskStyle): Prom
   await refreshRules();
 }
 
-function handleMessage(message: ExtensionMessage): MessageResponse {
+async function handleMessage(message: ExtensionMessage): Promise<MessageResponse> {
   switch (message.type) {
     case "GET_PAGE_STATUS":
       return { ok: true, data: currentStatus() };
@@ -108,9 +119,46 @@ function handleMessage(message: ExtensionMessage): MessageResponse {
     case "RULES_CHANGED":
       void refreshRules();
       return { ok: true };
+    case "CREATE_GMAIL_RULE":
+      return saveGmailRule(message.target, message.style);
     default:
       return { ok: true };
   }
+}
+
+async function saveGmailRule(options: GmailRuleOptions, style: MaskStyle): Promise<MessageResponse> {
+  if (!(adapter instanceof GmailAdapter)) {
+    return { ok: false, error: "This action is available only on Gmail." };
+  }
+  const threadId = adapter.currentThreadId();
+  if (!threadId) {
+    return { ok: false, error: "Gmail's rendered thread ID is not available yet." };
+  }
+  const now = Date.now();
+  const rule: MaskRule = {
+    id: createId("gmail_rule"),
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    enabled: true,
+    createdAt: now,
+    updatedAt: now,
+    scope: { kind: "origin", origin: window.location.origin },
+    locator: generateLocator(document.body),
+    style: { ...style },
+    gmailTarget: {
+      threadId,
+      ...withRouteId(adapter.currentRouteId()),
+      ...options,
+    },
+  };
+  const response = await chrome.runtime.sendMessage({ type: "SAVE_RULE", rule } satisfies ExtensionMessage) as MessageResponse;
+  if (response.ok) {
+    await refreshRules();
+  }
+  return response;
+}
+
+function withRouteId(routeId: string | undefined): Pick<NonNullable<MaskRule["gmailTarget"]>, "routeId"> | Record<never, never> {
+  return routeId ? { routeId } : {};
 }
 
 function initialize(): void {
@@ -138,8 +186,10 @@ function initialize(): void {
       return false;
     }
 
-    sendResponse(handleMessage(rawMessage));
-    return false;
+    void handleMessage(rawMessage).then(sendResponse).catch((error: unknown) => {
+      sendResponse({ ok: false, error: error instanceof Error ? error.message : "Unexpected extension error" });
+    });
+    return true;
   });
 
   void settingsStore.get()
@@ -158,8 +208,21 @@ function finalizeStatus(status: PageStatus): PageStatus {
   strictMaskController.configure(currentSettings.strictMask);
   if (rulesReady) {
     privacyGate.reconcile(status);
+    reconcileGmailGuard();
   }
   return status;
+}
+
+function reconcileGmailGuard(): void {
+  if (!gmailGuard || !(adapter instanceof GmailAdapter)) {
+    return;
+  }
+  const protectedRules = maskManager.applicableRulesForPage(window.location.href)
+    .filter((rule) => adapter.isProtectedThreadRoute(window.location.href, rule));
+  gmailGuard.reconcile(
+    protectedRules.length > 0,
+    protectedRules.length > 0 && protectedRules.every((rule) => maskManager.isRuleResolved(rule.id)),
+  );
 }
 
 function applySettings(settings: ExtensionSettings): void {

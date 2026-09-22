@@ -92,6 +92,33 @@ button:focus-visible {
   padding: 10px 12px;
 }
 
+.gmail-protection {
+  background: #fff;
+  border: 1px solid #e2e5ef;
+  border-radius: 12px;
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.gmail-protection h2 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.gmail-protection label {
+  display: block;
+  font-size: 12px;
+  margin: 7px 0;
+}
+
+.gmail-style select {
+  margin-left: 8px;
+}
+
+#protect-gmail {
+  margin-top: 10px;
+}
+
 .primary-button {
   background: #4b5ee5;
   color: #fff;
