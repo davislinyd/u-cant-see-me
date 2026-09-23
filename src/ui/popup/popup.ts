@@ -1,7 +1,34 @@
 import "./popup.css";
 import { requestHostPermissionForUrl } from "../../background/permissions";
+import { resolveLanguage, translate, type Language, type MessageKey } from "../../shared/i18n";
 import type { ExtensionMessage, MessageResponse } from "../../shared/messages";
 import type { MaskType } from "../../shared/types";
+import { SettingsStore } from "../../storage/settings-store";
+
+const settingsStore = new SettingsStore();
+let currentLanguage: Language = "en";
+
+function t(key: MessageKey, vars?: Record<string, string | number>): string {
+  return translate(key, currentLanguage, vars);
+}
+
+function applyStaticTranslations(): void {
+  document.documentElement.lang = currentLanguage === "zh-Hant" ? "zh-Hant" : "en";
+  document.title = t("doc.title.popup");
+  document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((element) => {
+    const key = element.dataset.i18n as MessageKey;
+    element.textContent = t(key);
+  });
+  document.querySelectorAll<HTMLElement>("[data-i18n-aria-label]").forEach((element) => {
+    const key = element.dataset.i18nAriaLabel as MessageKey;
+    element.setAttribute("aria-label", t(key));
+  });
+  document.querySelectorAll<HTMLButtonElement>("#language-switch [data-language]").forEach((button) => {
+    const active = button.dataset.language === currentLanguage;
+    button.setAttribute("aria-pressed", String(active));
+    button.classList.toggle("is-active", active);
+  });
+}
 
 const stateElement = document.querySelector<HTMLElement>("#protection-state");
 const detailElement = document.querySelector<HTMLElement>("#status-detail");
@@ -27,7 +54,7 @@ async function sendRuntimeMessage(message: ExtensionMessage): Promise<MessageRes
 async function loadStatus(): Promise<void> {
   const tab = await getActiveTab();
   if (tab?.id === undefined) {
-    updateStatus("No active page", "目前沒有可讀取的分頁。", 0);
+    updateStatus("no-active-page", t("popup.detail.noActivePage"), 0);
     return;
   }
   if (gmailProtection) {
@@ -37,14 +64,21 @@ async function loadStatus(): Promise<void> {
   try {
     const response = await chrome.tabs.sendMessage(tab.id, { type: "GET_PAGE_STATUS" } satisfies ExtensionMessage) as MessageResponse;
     if (response.ok && response.data && typeof response.data === "object" && "state" in response.data) {
-      updateStatus(response.data.state, `Active masks: ${response.data.activeMasks} · Unresolved: ${response.data.unresolvedRules}`, response.data.activeMasks);
+      const data = response.data;
+      const activeMasks = typeof data.activeMasks === "number" ? data.activeMasks : 0;
+      const unresolvedRules = typeof data.unresolvedRules === "number" ? data.unresolvedRules : 0;
+      updateStatus(
+        String(data.state),
+        t("popup.detail.status", { active: activeMasks, unresolved: unresolvedRules }),
+        activeMasks,
+      );
       return;
     }
   } catch {
     // The content script is intentionally optional until host access is granted.
   }
 
-  updateStatus("Ready", "此分頁尚未啟用保護規則。", 0);
+  updateStatus("ready", t("popup.detail.noProtection"), 0);
 }
 
 function updateStatus(state: string, detail: string, count: number): void {
@@ -68,10 +102,31 @@ function showFeedback(message: string): void {
   }
 }
 
+async function setLanguage(language: Language): Promise<void> {
+  if (language === currentLanguage) return;
+  currentLanguage = language;
+  applyStaticTranslations();
+  try {
+    await settingsStore.update({ language });
+  } catch {
+    showFeedback(t("options.feedback.languageFailed"));
+  }
+  await loadStatus();
+}
+
+document.querySelectorAll<HTMLButtonElement>("#language-switch [data-language]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const language = button.dataset.language;
+    if (language === "en" || language === "zh-Hant") {
+      void setLanguage(language);
+    }
+  });
+});
+
 selectButton?.addEventListener("click", async () => {
   const tab = await getActiveTab();
   if (tab?.id === undefined) {
-    showFeedback("找不到可操作的分頁。");
+    showFeedback(t("popup.feedback.noTab"));
     return;
   }
 
@@ -83,23 +138,23 @@ selectButton?.addEventListener("click", async () => {
   }
 
   showFeedback(automaticRestore
-    ? "Selection mode started."
-    : "Selection mode started; automatic restore needs site access.");
+    ? t("popup.feedback.selectionStarted")
+    : t("popup.feedback.selectionNeedsAccess"));
 });
 
 editButton?.addEventListener("click", async () => {
   const tab = await getActiveTab();
-  if (tab?.id === undefined) return showFeedback("找不到可操作的分頁。");
+  if (tab?.id === undefined) return showFeedback(t("popup.feedback.noTab"));
   const response = await sendRuntimeMessage({ type: "START_EDIT_MODE", tabId: tab.id });
-  showFeedback(response.ok ? "Edit mode started." : response.error);
+  showFeedback(response.ok ? t("popup.feedback.editStarted") : response.error);
 });
 
 for (const [selector, action] of [["#disable-page", "disable-page"], ["#disable-site", "disable-site"], ["#remove-page", "remove-page"]] as const) {
   document.querySelector<HTMLButtonElement>(selector)?.addEventListener("click", async () => {
     const tab = await getActiveTab();
-    if (tab?.id === undefined) return showFeedback("找不到可操作的分頁。");
+    if (tab?.id === undefined) return showFeedback(t("popup.feedback.noTab"));
     const response = await sendRuntimeMessage({ type: "MANAGE_PAGE_RULES", tabId: tab.id, action });
-    showFeedback(response.ok ? "Page rules updated." : response.error);
+    showFeedback(response.ok ? t("popup.feedback.pageRulesUpdated") : response.error);
     if (response.ok) await loadStatus();
   });
 }
@@ -107,11 +162,11 @@ for (const [selector, action] of [["#disable-page", "disable-page"], ["#disable-
 protectGmailButton?.addEventListener("click", async () => {
   const tab = await getActiveTab();
   if (tab?.id === undefined || !tab.url) {
-    showFeedback("找不到可操作的 Gmail 分頁。");
+    showFeedback(t("popup.feedback.noGmailTab"));
     return;
   }
   if (!await requestHostPermissionForUrl(tab.url)) {
-    showFeedback("Gmail protection requires site access.");
+    showFeedback(t("popup.feedback.gmailNeedsAccess"));
     return;
   }
   const style = document.querySelector<HTMLSelectElement>("#gmail-mask-style")?.value as MaskType | undefined;
@@ -127,7 +182,7 @@ protectGmailButton?.addEventListener("click", async () => {
       maskListSnippet: isChecked("#gmail-list-snippet"),
     },
   });
-  showFeedback(response.ok ? "Gmail protection saved." : response.error);
+  showFeedback(response.ok ? t("popup.feedback.gmailSaved") : response.error);
   if (response.ok) {
     await loadStatus();
   }
@@ -136,7 +191,7 @@ protectGmailButton?.addEventListener("click", async () => {
 revealButton?.addEventListener("click", async () => {
   const tab = await getActiveTab();
   if (tab?.id === undefined) {
-    showFeedback("找不到可操作的分頁。");
+    showFeedback(t("popup.feedback.noTab"));
     return;
   }
 
@@ -146,8 +201,8 @@ revealButton?.addEventListener("click", async () => {
     return;
   }
 
-  showFeedback("All masks are revealed for 10 seconds.");
-  updateStatus("temporarily-revealed", "Masks will relock automatically.", 0);
+  showFeedback(t("popup.feedback.revealed"));
+  updateStatus("temporarily-revealed", t("popup.feedback.relockAuto"), 0);
 });
 
 manageButton?.addEventListener("click", () => {
@@ -158,7 +213,16 @@ settingsButton?.addEventListener("click", () => {
   void chrome.runtime.openOptionsPage();
 });
 
-void loadStatus();
+void (async () => {
+  try {
+    const settings = await settingsStore.get();
+    currentLanguage = resolveLanguage(settings);
+  } catch {
+    currentLanguage = "en";
+  }
+  applyStaticTranslations();
+  await loadStatus();
+})();
 
 function isGmailUrl(value: string | undefined): boolean {
   if (!value) return false;
@@ -175,11 +239,11 @@ function isChecked(selector: string): boolean {
 }
 
 function humanizeState(state: string): string {
-  return ({
-    protected: "Protected",
-    "partially-protected": "Partially protected",
-    unresolved: "Unresolved",
-    "protection-failure": "Protection failure",
-    "no-masks": "No masks",
-  } as Record<string, string>)[state] ?? state;
+  const knownStates = ["protected", "partially-protected", "unresolved", "protection-failure", "no-masks"] as const;
+  if (state === "no-active-page") return t("popup.state.noActivePage");
+  if (state === "ready") return t("popup.state.ready");
+  if ((knownStates as readonly string[]).includes(state)) {
+    return t(`popup.state.${state}` as MessageKey);
+  }
+  return state;
 }

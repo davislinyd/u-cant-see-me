@@ -5,6 +5,9 @@ button, input, select { font: inherit; }
 button, .import-button { border: 0; border-radius: 8px; cursor: pointer; padding: 8px 11px; }
 button:focus-visible, input:focus-visible, select:focus-visible, .import-button:focus-within { outline: 3px solid rgba(75, 94, 229, .35); outline-offset: 2px; }
 .options-shell { margin: 0 auto; max-width: 920px; padding: 48px 24px; }
+.language-switch { background: #eef0f8; border-radius: 999px; display: inline-flex; gap: 2px; padding: 3px; }
+.language-switch button { background: transparent; border-radius: 999px; color: #636b85; font-size: 11px; font-weight: 700; padding: 5px 10px; width: auto; }
+.language-switch button.is-active { background: #fff; box-shadow: 0 1px 3px rgba(26, 29, 43, .16); color: #1a1d2b; }
 .eyebrow { color: #636b85; font-size: 11px; font-weight: 700; letter-spacing: .14em; margin: 0 0 6px; }
 h1, h2 { margin: 0; } h1 { font-size: 32px; } h2 { font-size: 18px; }
 .intro, .empty-state, .feedback, .backup-card p, .shortcut-note { color: #636b85; line-height: 1.6; }
@@ -13,7 +16,7 @@ h1, h2 { margin: 0; } h1 { font-size: 32px; } h2 { font-size: 18px; }
 .settings-card, .backup-card, .diagnostics-card { margin-top: 16px; padding: 18px 20px; }.setting-row { align-items: center; display: flex; gap: 16px; justify-content: space-between; margin-top: 14px; }.setting-row span { line-height: 1.4; }.shortcut-note { font-size: 13px; margin: 16px 0 0; }
 .backup-card button, .import-button, #refresh-status { background: #4b5ee5; color: #fff; display: inline-block; font-weight: 700; margin-right: 8px; }.import-button input { display: none; }
 .section-heading { align-items: center; display: flex; justify-content: space-between; margin-top: 34px; }.section-heading h2 { margin: 0; }
-.rule-filters { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0; }.rule-filters input, .rule-filters select, .rule-controls input, .rule-controls select { border: 1px solid #cfd4e4; border-radius: 7px; min-width: 0; padding: 7px; }
+.rule-filters { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0; }.rule-filters input, .rule-filters select, .rule-controls input, .rule-controls select { border: 1px solid #cfd4e4; border-radius: 7px; min-width: 0; padding: 7px; }.rule-controls select { width: auto; }
 .rule-list { display: grid; gap: 10px; list-style: none; margin: 14px 0 0; padding: 0; }.rule-item { padding: 14px 16px; }.rule-item strong, .rule-item > span { display: block; }.rule-item > span { color: #636b85; font-size: 12px; margin-top: 4px; }
 .rule-controls { align-items: center; display: grid; gap: 8px; grid-template-columns: repeat(4, auto) minmax(110px, 1fr) minmax(140px, 1fr) repeat(3, auto); margin-top: 12px; }.rule-controls button { background: #eef0f8; color: #303850; }.rule-controls .danger-button { background: #fff0f0; color: #aa2020; }.rule-controls label { color: #636b85; font-size: 11px; }.rule-controls label input { display: block; margin-top: 2px; max-width: 72px; }
 .feedback { min-height: 20px; }

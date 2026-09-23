@@ -17,6 +17,7 @@ export const DEFAULT_MASK_STYLE: MaskStyle = {
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   schemaVersion: CURRENT_SCHEMA_VERSION,
+  language: "en",
   protectionEnabled: true,
   defaultMaskStyle: DEFAULT_MASK_STYLE,
   blurStrength: 14,

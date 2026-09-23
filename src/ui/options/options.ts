@@ -1,4 +1,5 @@
 import "./options.css";
+import { resolveLanguage, translate, type Language, type MessageKey } from "../../shared/i18n";
 import { RuleStore } from "../../storage/rule-store";
 import { SettingsStore } from "../../storage/settings-store";
 import { validateImportedConfiguration } from "../../storage/migrations";
@@ -8,6 +9,33 @@ import { createId } from "../../shared/utils";
 
 const ruleStore = new RuleStore();
 const settingsStore = new SettingsStore();
+let currentLanguage: Language = "en";
+
+function t(key: MessageKey, vars?: Record<string, string | number>): string {
+  return translate(key, currentLanguage, vars);
+}
+
+function applyStaticTranslations(): void {
+  document.documentElement.lang = currentLanguage === "zh-Hant" ? "zh-Hant" : "en";
+  document.title = t("doc.title.options");
+  document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((element) => {
+    const key = element.dataset.i18n as MessageKey;
+    element.textContent = t(key);
+  });
+  document.querySelectorAll<HTMLElement>("[data-i18n-aria-label]").forEach((element) => {
+    const key = element.dataset.i18nAriaLabel as MessageKey;
+    element.setAttribute("aria-label", t(key));
+  });
+  document.querySelectorAll<HTMLInputElement>("[data-i18n-placeholder]").forEach((element) => {
+    const key = element.dataset.i18nPlaceholder as MessageKey;
+    element.placeholder = t(key);
+  });
+  document.querySelectorAll<HTMLButtonElement>("#language-switch [data-language]").forEach((button) => {
+    const active = button.dataset.language === currentLanguage;
+    button.setAttribute("aria-pressed", String(active));
+    button.classList.toggle("is-active", active);
+  });
+}
 const countElement = document.querySelector<HTMLElement>("#rule-count");
 const emptyElement = document.querySelector<HTMLElement>("#empty-state");
 const listElement = document.querySelector<HTMLUListElement>("#rule-list");
@@ -28,7 +56,7 @@ async function loadRules(): Promise<void> {
     rules = await ruleStore.list();
     renderRules();
   } catch {
-    showFeedback("無法讀取規則儲存區。");
+    showFeedback(t("options.feedback.readRulesFailed"));
   }
 }
 
@@ -46,32 +74,32 @@ function createRuleItem(rule: MaskRule): HTMLLIElement {
   item.className = "rule-item";
   item.dataset.ruleId = rule.id;
   const title = document.createElement("strong");
-  title.textContent = `${adapterLabel(rule)} · ${rule.style.type} · ${rule.enabled ? "enabled" : "disabled"}`;
+  title.textContent = `${adapterLabel(rule)} · ${rule.style.type} · ${rule.enabled ? t("options.rule.stateEnabled") : t("options.rule.stateDisabled")}`;
   const metadata = document.createElement("span");
   metadata.textContent = `${healthLabel(rule)} · ${rule.id}`;
   const controls = document.createElement("div");
   controls.className = "rule-controls";
 
-  const enabled = checkbox("Enabled", rule.enabled, async (checked) => saveRule({ ...rule, enabled: checked, updatedAt: Date.now() }));
+  const enabled = checkbox(t("options.rule.enabled"), rule.enabled, async (checked) => saveRule({ ...rule, enabled: checked, updatedAt: Date.now() }));
   const style = select(["black", "white", "blur", "mosaic"], rule.style.type, async (value) => {
     await saveRule({ ...rule, style: { ...rule.style, type: value as MaskType }, updatedAt: Date.now() });
   });
-  style.setAttribute("aria-label", `Mask style for ${rule.id}`);
-  const blurRadius = numberInput("Blur radius", rule.style.blurRadius ?? 14, async (value) => {
+  style.setAttribute("aria-label", t("options.rule.maskStyleAria", { id: rule.id }));
+  const blurRadius = numberInput(t("options.rule.blurRadius"), rule.style.blurRadius ?? 14, async (value) => {
     await saveRule({ ...rule, style: { ...rule.style, blurRadius: value }, updatedAt: Date.now() });
   });
-  const mosaicSize = numberInput("Mosaic size", rule.style.mosaicSize ?? 12, async (value) => {
+  const mosaicSize = numberInput(t("options.rule.mosaicSize"), rule.style.mosaicSize ?? 12, async (value) => {
     await saveRule({ ...rule, style: { ...rule.style, mosaicSize: value }, updatedAt: Date.now() });
   });
   const scopeKind = select(["exact-url", "origin", "path-pattern"], rule.scope.kind, async () => undefined);
-  scopeKind.setAttribute("aria-label", `Scope kind for ${rule.id}`);
+  scopeKind.setAttribute("aria-label", t("options.rule.scopeKindAria", { id: rule.id }));
   const scopeValue = document.createElement("input");
   scopeValue.value = scopeToValue(rule.scope);
-  scopeValue.setAttribute("aria-label", `Scope value for ${rule.id}`);
+  scopeValue.setAttribute("aria-label", t("options.rule.scopeValueAria", { id: rule.id }));
   scopeValue.addEventListener("change", () => {
     const scope = parseScope(scopeKind.value, scopeValue.value);
     if (!scope) {
-      showFeedback("範圍格式無效；未儲存變更。");
+      showFeedback(t("options.feedback.invalidScope"));
       scopeValue.value = scopeToValue(rule.scope);
       return;
     }
@@ -80,16 +108,16 @@ function createRuleItem(rule: MaskRule): HTMLLIElement {
   scopeKind.addEventListener("change", () => {
     const scope = parseScope(scopeKind.value, scopeValue.value);
     if (!scope) {
-      showFeedback("請先輸入可用的 URL 或 origin/path pattern。");
+      showFeedback(t("options.feedback.scopeNeedsValue"));
       scopeKind.value = rule.scope.kind;
       return;
     }
     void saveRule({ ...rule, scope, updatedAt: Date.now() });
   });
 
-  const testButton = button("Test locator", () => void testRule(rule));
-  const duplicateButton = button("Duplicate", () => void duplicateRule(rule));
-  const deleteButton = button("Delete", () => void deleteRule(rule));
+  const testButton = button(t("options.rule.testLocator"), () => void testRule(rule));
+  const duplicateButton = button(t("options.rule.duplicate"), () => void duplicateRule(rule));
+  const deleteButton = button(t("options.rule.delete"), () => void deleteRule(rule));
   deleteButton.classList.add("danger-button");
   controls.append(enabled, style, blurRadius, mosaicSize, scopeKind, scopeValue, testButton, duplicateButton, deleteButton);
   item.append(title, metadata, controls);
@@ -99,7 +127,7 @@ function createRuleItem(rule: MaskRule): HTMLLIElement {
 async function saveRule(rule: MaskRule): Promise<void> {
   const response = await chrome.runtime.sendMessage({ type: "SAVE_RULE", rule } satisfies ExtensionMessage) as MessageResponse;
   if (!response.ok) return showFeedback(response.error);
-  showFeedback("規則已儲存。");
+  showFeedback(t("options.feedback.ruleSaved"));
   await loadRules();
 }
 
@@ -112,15 +140,17 @@ async function deleteRule(rule: MaskRule): Promise<void> {
   const response = await chrome.runtime.sendMessage({ type: "REMOVE_RULE", ruleId: rule.id } satisfies ExtensionMessage) as MessageResponse;
   if (!response.ok) return showFeedback(response.error);
   healthByRuleId.delete(rule.id);
-  showFeedback("規則已刪除。");
+  showFeedback(t("options.feedback.ruleDeleted"));
   await loadRules();
 }
 
 async function testRule(rule: MaskRule): Promise<void> {
   const response = await chrome.runtime.sendMessage({ type: "TEST_RULE", rule } satisfies ExtensionMessage) as MessageResponse;
-  if (!response.ok || !isRuleTestResult(response.data)) return showFeedback(response.ok ? "目前分頁無法測試此規則。" : response.error);
+  if (!response.ok || !isRuleTestResult(response.data)) return showFeedback(response.ok ? t("options.feedback.ruleUntestable") : response.error);
   healthByRuleId.set(rule.id, response.data);
-  showFeedback(response.data.resolved ? `定位成功：${response.data.targetCount} 個目標。` : "定位尚未解析；規則未變更。");
+  showFeedback(response.data.resolved
+    ? t("options.feedback.testSuccess", { count: response.data.targetCount })
+    : t("options.feedback.testUnresolved"));
   renderRules();
 }
 
@@ -132,15 +162,41 @@ async function refreshRuleHealth(): Promise<void> {
 async function loadSettings(): Promise<void> {
   try {
     const settings = await settingsStore.get();
+    currentLanguage = resolveLanguage(settings);
+    applyStaticTranslations();
     if (privacyModeElement) privacyModeElement.value = settings.privacyMode;
     if (strictMaskElement) strictMaskElement.checked = settings.strictMask;
   } catch {
-    showFeedback("無法讀取隱私設定。");
+    showFeedback(t("options.feedback.readSettingsFailed"));
   }
 }
 
-privacyModeElement?.addEventListener("change", () => void settingsStore.update({ privacyMode: privacyModeElement.value as PrivacyMode }).then(() => showFeedback("隱私模式已儲存。")).catch(() => showFeedback("無法儲存隱私模式。")));
-strictMaskElement?.addEventListener("change", () => void settingsStore.update({ strictMask: strictMaskElement.checked }).then(() => showFeedback("Strict Mask 設定已儲存。")).catch(() => showFeedback("無法儲存 Strict Mask 設定。")));
+applyStaticTranslations();
+
+async function setLanguage(language: Language): Promise<void> {
+  if (language === currentLanguage) return;
+  currentLanguage = language;
+  applyStaticTranslations();
+  try {
+    await settingsStore.update({ language });
+    showFeedback(t("options.feedback.languageSaved"));
+  } catch {
+    showFeedback(t("options.feedback.languageFailed"));
+  }
+  renderRules();
+}
+
+document.querySelectorAll<HTMLButtonElement>("#language-switch [data-language]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const language = button.dataset.language;
+    if (language === "en" || language === "zh-Hant") {
+      void setLanguage(language);
+    }
+  });
+});
+
+privacyModeElement?.addEventListener("change", () => void settingsStore.update({ privacyMode: privacyModeElement.value as PrivacyMode }).then(() => showFeedback(t("options.feedback.privacyModeSaved"))).catch(() => showFeedback(t("options.feedback.privacyModeFailed"))));
+strictMaskElement?.addEventListener("change", () => void settingsStore.update({ strictMask: strictMaskElement.checked }).then(() => showFeedback(t("options.feedback.strictMaskSaved"))).catch(() => showFeedback(t("options.feedback.strictMaskFailed"))));
 filterForm?.addEventListener("input", renderRules);
 filterForm?.addEventListener("change", renderRules);
 refreshStatusButton?.addEventListener("click", () => void refreshRuleHealth());
@@ -150,7 +206,7 @@ diagnosticsButton?.addEventListener("click", () => void loadDiagnostics());
 
 async function loadDiagnostics(): Promise<void> {
   const response = await chrome.runtime.sendMessage({ type: "GET_PAGE_DIAGNOSTICS" } satisfies ExtensionMessage) as MessageResponse;
-  if (!response.ok || !isPageDiagnostics(response.data)) return showFeedback(response.ok ? "目前分頁沒有可用的診斷資料。" : response.error);
+  if (!response.ok || !isPageDiagnostics(response.data)) return showFeedback(response.ok ? t("options.feedback.noDiagnostics") : response.error);
   if (diagnosticsOutput) {
     diagnosticsOutput.hidden = false;
     diagnosticsOutput.textContent = JSON.stringify(response.data, null, 2);
@@ -165,7 +221,7 @@ async function exportConfiguration(): Promise<void> {
   anchor.download = "u-cant-see-me-config.json";
   anchor.click();
   URL.revokeObjectURL(anchor.href);
-  showFeedback("設定已匯出。檔案可能包含 URL、結構屬性與 Gmail ID。");
+  showFeedback(t("options.feedback.exported"));
 }
 
 async function importConfiguration(): Promise<void> {
@@ -178,10 +234,10 @@ async function importConfiguration(): Promise<void> {
     const response = await chrome.runtime.sendMessage({ type: "RULES_CHANGED" } satisfies ExtensionMessage) as MessageResponse;
     if (!response.ok) throw new Error(response.error);
     healthByRuleId.clear();
-    showFeedback("設定已匯入；temporary reveal 狀態不會匯入。");
+    showFeedback(t("options.feedback.imported"));
     await Promise.all([loadRules(), loadSettings()]);
   } catch {
-    showFeedback("匯入失敗：請選擇完整且有效的 U Cant See Me JSON 設定檔。 ");
+    showFeedback(t("options.feedback.importFailed"));
   } finally {
     if (importInput) importInput.value = "";
   }
@@ -222,7 +278,11 @@ function scopeToValue(scope: SiteScope): string {
 }
 
 function adapterLabel(rule: MaskRule): string { return rule.gmailTarget ? "Gmail" : "Generic"; }
-function healthLabel(rule: MaskRule): string { const health = healthByRuleId.get(rule.id); return health ? (health.resolved ? "resolved" : "unresolved") : "not tested"; }
+function healthLabel(rule: MaskRule): string {
+  const health = healthByRuleId.get(rule.id);
+  if (!health) return t("options.rule.health.notTested");
+  return health.resolved ? t("options.rule.health.resolved") : t("options.rule.health.unresolved");
+}
 function showFeedback(message: string): void { if (feedbackElement) feedbackElement.textContent = message; }
 function isRuleTestResult(value: unknown): value is RuleTestResult { return typeof value === "object" && value !== null && "resolved" in value && "targetCount" in value; }
 function isPageDiagnostics(value: unknown): value is PageDiagnostics { return typeof value === "object" && value !== null && "adapterId" in value; }

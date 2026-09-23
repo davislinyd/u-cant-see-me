@@ -1731,7 +1731,7 @@ English
 Traditional Chinese
 ```
 
-If feasible, add both now.
+Implemented in 0.2.0: the popup and Options page ship in English and Traditional Chinese (Taiwan), switched by a persisted language control.
 
 Use Traditional Chinese suitable for Taiwan.
 

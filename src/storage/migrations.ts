@@ -56,6 +56,7 @@ function migrateSettings(input: unknown): ExtensionSettings {
 
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
+    language: source.language === "zh-Hant" ? "zh-Hant" : DEFAULT_SETTINGS.language,
     protectionEnabled: source.protectionEnabled !== false,
     defaultMaskStyle: {
       type: sourceStyle.type === "white" || sourceStyle.type === "blur" || sourceStyle.type === "mosaic"

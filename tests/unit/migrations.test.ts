@@ -60,4 +60,12 @@ describe("storage migrations", () => {
 
     expect(validateImportedConfiguration(configuration)).toBeNull();
   });
+
+  it("defaults missing language to English and preserves valid values", () => {
+    expect(migrateStoredSchema({ settings: {} }).settings.language).toBe("en");
+    expect(migrateStoredSchema({ settings: { language: "zh-Hant" } }).settings.language).toBe("zh-Hant");
+    expect(migrateStoredSchema({ settings: { language: "en" } }).settings.language).toBe("en");
+    expect(migrateStoredSchema({ settings: { language: "fr" } }).settings.language).toBe("en");
+    expect(migrateStoredSchema({ settings: { language: 42 } }).settings.language).toBe("en");
+  });
 });

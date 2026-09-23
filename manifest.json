@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "U Cant See Me",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local visual privacy protection for browser-rendered content.",
   "minimum_chrome_version": "120",
   "permissions": [

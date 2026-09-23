@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Added English/Traditional Chinese interface switching: a language segmented control in the popup and Options page persists the preference in synced settings and re-renders both surfaces immediately. Product terms (Gmail, Strict Mask, Blur, Mosaic, URL, locator) stay in English in both languages.
+- New installs default to English; existing installs migrate in place to English without a schema version bump, and the language preference is included in configuration import/export.
+
 ## Unreleased
 
 - Added local generic masking, resilient locators, document-start privacy gate, temporary reveal/relock, print protection, and strict masking.

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,38 +9,45 @@
     <main class="options-shell">
       <header>
         <p class="eyebrow">U CANT SEE ME</p>
-        <h1>Manage masks</h1>
-        <p class="intro">Rules show local structural metadata only—never page text, email subjects, snippets, or message content.</p>
+        <h1 data-i18n="options.heading">Manage masks</h1>
+        <p class="intro" data-i18n="options.intro">Rules show local structural metadata only—never page text, email subjects, snippets, or message content.</p>
       </header>
-      <section class="summary-card" aria-live="polite"><span>Stored rules</span><strong id="rule-count">0</strong></section>
+      <section class="summary-card" aria-live="polite"><span data-i18n="options.storedRules">Stored rules</span><strong id="rule-count">0</strong></section>
       <section class="settings-card">
-        <h2>Privacy settings</h2>
-        <label class="setting-row" for="privacy-mode"><span>Privacy mode</span><select id="privacy-mode"><option value="maximum">Maximum Privacy</option><option value="balanced">Balanced</option><option value="performance">Performance</option></select></label>
-        <label class="setting-row" for="strict-mask"><span>Strict Mask blocks pointer interaction and copy inside masked targets</span><input id="strict-mask" type="checkbox" /></label>
-        <p class="shortcut-note">Shortcuts: Alt+Shift+S select, Alt+Shift+V reveal, Alt+Shift+L remask. Hold Alt+Shift+H on a protected page to reveal only while held. Chromium lets you customize command shortcuts in its extension shortcut UI.</p>
+        <h2 data-i18n="options.privacySettings">Privacy settings</h2>
+        <div class="setting-row">
+          <span data-i18n="lang.toggleLabel">Language</span>
+          <div class="language-switch" id="language-switch" role="group" data-i18n-aria-label="lang.toggleLabel" aria-label="Language">
+            <button type="button" data-language="zh-Hant">中文</button>
+            <button type="button" data-language="en">English</button>
+          </div>
+        </div>
+        <label class="setting-row" for="privacy-mode"><span data-i18n="options.privacyMode">Privacy mode</span><select id="privacy-mode"><option value="maximum">Maximum Privacy</option><option value="balanced">Balanced</option><option value="performance">Performance</option></select></label>
+        <label class="setting-row" for="strict-mask"><span data-i18n="options.strictMask">Strict Mask blocks pointer interaction and copy inside masked targets</span><input id="strict-mask" type="checkbox" /></label>
+        <p class="shortcut-note" data-i18n="options.shortcutNote">Shortcuts: Alt+Shift+S select, Alt+Shift+V reveal, Alt+Shift+L remask. Hold Alt+Shift+H on a protected page to reveal only while held. Chromium lets you customize command shortcuts in its extension shortcut UI.</p>
       </section>
       <section class="backup-card">
-        <h2>Backup</h2>
-        <p>Exports can contain URLs, structural attributes, Gmail thread/message identifiers, and settings. Temporary reveal state is never exported.</p>
-        <button id="export-config" type="button">Export configuration</button>
-        <label class="import-button">Import configuration<input id="import-config" type="file" accept="application/json,.json" /></label>
+        <h2 data-i18n="options.backup">Backup</h2>
+        <p data-i18n="options.backupNote">Exports can contain URLs, structural attributes, Gmail thread/message identifiers, and settings. Temporary reveal state is never exported.</p>
+        <button id="export-config" type="button" data-i18n="options.exportConfig">Export configuration</button>
+        <label class="import-button"><span data-i18n="options.importConfig">Import configuration</span><input id="import-config" type="file" accept="application/json,.json" /></label>
       </section>
       <section class="diagnostics-card">
-        <div class="section-heading"><h2>Developer diagnostics</h2><button id="load-diagnostics" type="button">Inspect current page</button></div>
-        <p>Shows structural IDs and surface availability only; never email or page text.</p>
+        <div class="section-heading"><h2 data-i18n="options.diagnostics">Developer diagnostics</h2><button id="load-diagnostics" type="button" data-i18n="options.inspectPage">Inspect current page</button></div>
+        <p data-i18n="options.diagnosticsNote">Shows structural IDs and surface availability only; never email or page text.</p>
         <pre id="diagnostics-output" hidden></pre>
       </section>
       <section>
-        <div class="section-heading"><h2>Rules</h2><button id="refresh-status" type="button">Test current page</button></div>
+        <div class="section-heading"><h2 data-i18n="options.rules">Rules</h2><button id="refresh-status" type="button" data-i18n="options.testCurrentPage">Test current page</button></div>
         <form id="rule-filters" class="rule-filters">
-          <input name="domain" placeholder="Filter domain" aria-label="Filter domain" />
-          <input name="url" placeholder="Filter URL" aria-label="Filter URL" />
-          <select name="adapter" aria-label="Filter adapter"><option value="all">All adapters</option><option value="generic">Generic</option><option value="gmail">Gmail</option></select>
-          <select name="style" aria-label="Filter mask style"><option value="all">All styles</option><option value="black">Black</option><option value="white">White</option><option value="blur">Blur</option><option value="mosaic">Mosaic</option></select>
-          <select name="enabled" aria-label="Filter enabled state"><option value="all">All states</option><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select>
-          <select name="health" aria-label="Filter locator status"><option value="all">All locator states</option><option value="resolved">Resolved</option><option value="unresolved">Unresolved/not tested</option></select>
+          <input name="domain" data-i18n-placeholder="options.filter.domain" data-i18n-aria-label="options.filter.domain" placeholder="Filter domain" aria-label="Filter domain" />
+          <input name="url" data-i18n-placeholder="options.filter.url" data-i18n-aria-label="options.filter.url" placeholder="Filter URL" aria-label="Filter URL" />
+          <select name="adapter" data-i18n-aria-label="options.filter.adapter" aria-label="Filter adapter"><option value="all" data-i18n="options.filter.adapterAll">All adapters</option><option value="generic">Generic</option><option value="gmail">Gmail</option></select>
+          <select name="style" data-i18n-aria-label="options.filter.style" aria-label="Filter mask style"><option value="all" data-i18n="options.filter.styleAll">All styles</option><option value="black">Black</option><option value="white">White</option><option value="blur">Blur</option><option value="mosaic">Mosaic</option></select>
+          <select name="enabled" data-i18n-aria-label="options.filter.enabled" aria-label="Filter enabled state"><option value="all" data-i18n="options.filter.stateAll">All states</option><option value="enabled" data-i18n="options.filter.enabledOnly">Enabled</option><option value="disabled" data-i18n="options.filter.disabledOnly">Disabled</option></select>
+          <select name="health" data-i18n-aria-label="options.filter.health" aria-label="Filter locator status"><option value="all" data-i18n="options.filter.healthAll">All locator states</option><option value="resolved" data-i18n="options.filter.resolved">Resolved</option><option value="unresolved" data-i18n="options.filter.unresolved">Unresolved/not tested</option></select>
         </form>
-        <p id="empty-state" class="empty-state">目前沒有已儲存的遮罩規則。</p>
+        <p id="empty-state" class="empty-state" data-i18n="options.emptyState">No mask rules stored yet.</p>
         <ul id="rule-list" class="rule-list"></ul>
       </section>
       <p id="feedback" class="feedback" role="status"></p>

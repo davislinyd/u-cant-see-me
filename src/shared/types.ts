@@ -86,9 +86,11 @@ export interface TemporaryRevealState {
 
 export type PrivacyMode = "maximum" | "balanced" | "performance";
 export type DebugLogging = "off" | "errors" | "verbose";
+export type Language = "en" | "zh-Hant";
 
 export interface ExtensionSettings {
   schemaVersion: number;
+  language: Language;
   protectionEnabled: boolean;
   defaultMaskStyle: MaskStyle;
   blurStrength: number;

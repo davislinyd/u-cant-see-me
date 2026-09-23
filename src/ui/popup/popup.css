@@ -27,6 +27,36 @@ body {
   gap: 16px;
 }
 
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.language-switch {
+  background: #eef0f8;
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+
+.language-switch button {
+  background: transparent;
+  border-radius: 999px;
+  color: #636b85;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 9px;
+  width: auto;
+}
+
+.language-switch button.is-active {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(26, 29, 43, 0.16);
+  color: #1a1d2b;
+}
+
 .eyebrow {
   color: #636b85;
   font-size: 10px;
@@ -113,6 +143,7 @@ button:focus-visible {
 
 .gmail-style select {
   margin-left: 8px;
+  width: auto;
 }
 
 #protect-gmail {
