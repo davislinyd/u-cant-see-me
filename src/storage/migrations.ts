@@ -1,5 +1,5 @@
 import { CURRENT_SCHEMA_VERSION, DEFAULT_SETTINGS } from "../shared/constants";
-import type { ExtensionSettings, GmailMaskTarget, MaskRule, StoredSchema } from "../shared/types";
+import type { ExtensionSettings, GmailMaskTarget, MaskRule, MaskStyle, MaskType, StoredSchema } from "../shared/types";
 import { isRecord } from "../shared/utils";
 
 export interface StoredRulesEnvelope {
@@ -14,7 +14,7 @@ export interface StoredSettingsEnvelope {
 
 export function migrateStoredSchema(input: unknown): StoredSchema {
   const record = isRecord(input) ? input : {};
-  const rules = Array.isArray(record.rules) ? record.rules.filter(isMaskRule) : [];
+  const rules = Array.isArray(record.rules) ? record.rules.filter(isMaskRule).map(migrateRule) : [];
   const settings = migrateSettings(record.settings);
 
   return {
@@ -37,7 +37,7 @@ export function migrateRulesEnvelope(input: unknown): StoredRulesEnvelope {
   const record = isRecord(input) ? input : {};
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
-    rules: Array.isArray(record.rules) ? record.rules.filter(isMaskRule) : [],
+    rules: Array.isArray(record.rules) ? record.rules.filter(isMaskRule).map(migrateRule) : [],
   };
 }
 
@@ -59,14 +59,10 @@ function migrateSettings(input: unknown): ExtensionSettings {
     language: source.language === "zh-Hant" ? "zh-Hant" : DEFAULT_SETTINGS.language,
     protectionEnabled: source.protectionEnabled !== false,
     defaultMaskStyle: {
-      type: sourceStyle.type === "white" || sourceStyle.type === "blur" || sourceStyle.type === "mosaic"
-        ? sourceStyle.type
-        : defaultStyle.type,
+      type: sourceStyle.type === "white" || sourceStyle.type === "blur" ? sourceStyle.type : defaultStyle.type,
       ...(typeof sourceStyle.blurRadius === "number" ? { blurRadius: sourceStyle.blurRadius } : {}),
-      ...(typeof sourceStyle.mosaicSize === "number" ? { mosaicSize: sourceStyle.mosaicSize } : {}),
     },
     blurStrength: typeof source.blurStrength === "number" ? source.blurStrength : DEFAULT_SETTINGS.blurStrength,
-    mosaicSize: typeof source.mosaicSize === "number" ? source.mosaicSize : DEFAULT_SETTINGS.mosaicSize,
     strictMask: source.strictMask === true,
     privacyMode: source.privacyMode === "balanced" || source.privacyMode === "performance"
       ? source.privacyMode
@@ -77,6 +73,17 @@ function migrateSettings(input: unknown): ExtensionSettings {
     debugLogging: source.debugLogging === "off" || source.debugLogging === "verbose"
       ? source.debugLogging
       : DEFAULT_SETTINGS.debugLogging,
+  };
+}
+
+function migrateRule(rule: MaskRule): MaskRule {
+  const style = { ...rule.style } as Record<string, unknown>;
+  const type: MaskType = style.type === "mosaic" ? "black" : style.type as MaskType;
+  delete style.mosaicSize;
+  return {
+    ...rule,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    style: { ...style, type } as MaskStyle,
   };
 }
 
@@ -93,7 +100,12 @@ function isMaskRule(value: unknown): value is MaskRule {
     isRecord(value.scope) &&
     isRecord(value.locator) &&
     isRecord(value.style) &&
+    isMaskType(value.style.type) &&
     (value.gmailTarget === undefined || isGmailMaskTarget(value.gmailTarget));
+}
+
+function isMaskType(value: unknown): value is MaskType | "mosaic" {
+  return value === "black" || value === "white" || value === "blur" || value === "mosaic";
 }
 
 function isGmailMaskTarget(value: unknown): value is GmailMaskTarget {

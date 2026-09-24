@@ -45,7 +45,7 @@ describe("storage migrations", () => {
     };
     const invalid = { ...baseRule, id: "broken_gmail", gmailTarget: { threadId: "thread_alpha1" } };
 
-    expect(migrateStoredSchema({ rules: [valid, invalid] }).rules).toEqual([valid]);
+    expect(migrateStoredSchema({ rules: [valid, invalid] }).rules).toEqual([{ ...valid, schemaVersion: CURRENT_SCHEMA_VERSION }]);
   });
 
   it("rejects an import envelope when any rule is malformed", () => {
@@ -59,6 +59,39 @@ describe("storage migrations", () => {
     };
 
     expect(validateImportedConfiguration(configuration)).toBeNull();
+  });
+
+  it("converts legacy Mosaic rules and settings to Black in schema v2", () => {
+    const legacyRule = {
+      id: "legacy_mosaic",
+      schemaVersion: 1,
+      enabled: true,
+      createdAt: 1,
+      updatedAt: 1,
+      scope: { kind: "origin", origin: "https://example.com" },
+      locator: { primary: { kind: "tag", value: "button" }, fallbacks: [], fingerprint: {}, confidenceThreshold: 80 },
+      style: { type: "mosaic", mosaicSize: 24 },
+    };
+    const legacyConfiguration = {
+      schemaVersion: 1,
+      rules: [legacyRule],
+      settings: {
+        schemaVersion: 1,
+        defaultMaskStyle: { type: "mosaic", mosaicSize: 28 },
+        mosaicSize: 28,
+      },
+    };
+
+    const migrated = migrateStoredSchema(legacyConfiguration);
+    const imported = validateImportedConfiguration(legacyConfiguration);
+
+    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.rules[0]).toMatchObject({ schemaVersion: 2, style: { type: "black" } });
+    expect(migrated.rules[0]?.style).not.toHaveProperty("mosaicSize");
+    expect(migrated.settings).toMatchObject({ schemaVersion: 2, defaultMaskStyle: { type: "black" } });
+    expect(migrated.settings).not.toHaveProperty("mosaicSize");
+    expect(migrated.settings.defaultMaskStyle).not.toHaveProperty("mosaicSize");
+    expect(imported).toEqual(migrated);
   });
 
   it("defaults missing language to English and preserves valid values", () => {

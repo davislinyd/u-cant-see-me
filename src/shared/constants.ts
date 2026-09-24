@@ -1,6 +1,6 @@
 import type { ExtensionSettings, MaskStyle } from "./types";
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 export const CONTENT_READY_ATTRIBUTE = "data-u-cant-see-me-ready";
 export const EXTENSION_ROOT_ATTRIBUTE = "data-u-cant-see-me-owned";
 export const PRIVACY_GATE_ATTRIBUTE = "data-u-cant-see-me-privacy-gate";
@@ -21,7 +21,6 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   protectionEnabled: true,
   defaultMaskStyle: DEFAULT_MASK_STYLE,
   blurStrength: 14,
-  mosaicSize: 12,
   strictMask: false,
   privacyMode: "maximum",
   relockOnNavigation: true,

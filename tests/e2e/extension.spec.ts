@@ -2,6 +2,7 @@ import { expect, test, chromium } from "@playwright/test";
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { CURRENT_SCHEMA_VERSION } from "../../src/shared/constants";
 
 test("loads the unpacked MV3 extension and its extension pages", async ({ baseURL }) => {
   const extensionPath = await createE2eExtension();
@@ -26,17 +27,19 @@ test("loads the unpacked MV3 extension and its extension pages", async ({ baseUR
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expect(popup.locator("h1")).toHaveText("Privacy protection");
     await expect(popup.locator("#select-elements")).toBeVisible();
+    await expect(popup.locator("#gmail-mask-style option")).toHaveCount(3);
 
     const options = await context.newPage();
     await options.goto(`chrome-extension://${extensionId}/options.html`);
     await expect(options.locator("h1")).toHaveText("Manage masks");
+    await expect(options.locator('#rule-filters select[name="style"] option')).toHaveCount(4);
   } finally {
     await context.close();
     await rm(extensionPath, { recursive: true, force: true });
   }
 });
 
-test("selects multiple elements, applies each mask style, and restores masks after reload", async ({ baseURL }) => {
+test("selects multiple elements, applies supported mask styles, and restores masks after reload", async ({ baseURL }) => {
   const extensionPath = await createE2eExtension();
   const context = await chromium.launchPersistentContext("", {
     headless: false,
@@ -75,20 +78,43 @@ test("selects multiple elements, applies each mask style, and restores masks aft
 
     await selectAndSave(page, worker, tabId as number, ["#fixture-input"], "white", false, 3);
     await selectAndSave(page, worker, tabId as number, ["#flex-item-one"], "blur", false, 3);
-    await selectAndSave(page, worker, tabId as number, ["#grid-item-one"], "mosaic", false, 4);
-    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(4);
+
+    const legacyRuleStored = await worker.evaluate(async () => {
+      const storageKey = "u-cant-see-me.rules";
+      const result = await chrome.storage.local.get(storageKey);
+      const stored = result[storageKey] as {
+        schemaVersion: number;
+        rules: Array<{ schemaVersion: number; style: Record<string, unknown> }>;
+      };
+      const legacyRule = stored.rules.find((rule) => rule.style.type === "white");
+      if (!legacyRule) return false;
+      stored.schemaVersion = 1;
+      legacyRule.schemaVersion = 1;
+      legacyRule.style = { type: "mosaic", mosaicSize: 18 };
+      await chrome.storage.local.set({ [storageKey]: stored });
+      return true;
+    });
+    expect(legacyRuleStored).toBe(true);
 
     await page.reload();
     await expect(page.locator("[data-u-cant-see-me-ready]")).toBeAttached({ timeout: 10_000 });
-    await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(4, { timeout: 10_000 });
+    await expect(page.locator('.u-cant-see-me-mask-overlay[data-mask-type="black"]')).toHaveCount(3, { timeout: 10_000 });
+    await expect(page.locator('.u-cant-see-me-mask-overlay[data-mask-type="white"]')).toHaveCount(0);
+    await expect(page.locator('.u-cant-see-me-mask-overlay[data-mask-type="mosaic"]')).toHaveCount(0);
     await expect(page.locator("#private-card")).toContainText("Sensitive-looking synthetic content.");
+    const migratedRules = await worker.evaluate(async () => {
+      const stored = await chrome.storage.local.get("u-cant-see-me.rules");
+      return stored["u-cant-see-me.rules"] as { schemaVersion: number; rules: Array<{ schemaVersion: number; style: { type: string } }> };
+    });
+    expect(migratedRules.schemaVersion).toBe(2);
+    expect(migratedRules.rules.every((rule) => rule.schemaVersion === 2 && rule.style.type !== "mosaic")).toBe(true);
   } finally {
     await context.close();
     await rm(extensionPath, { recursive: true, force: true });
   }
 });
 
-test("keeps icon-button selections exact across all mask styles", async ({ baseURL }) => {
+test("keeps icon-button selections exact across supported mask styles", async ({ baseURL }) => {
   const extensionPath = await createE2eExtension();
   const context = await chromium.launchPersistentContext("", {
     headless: false,
@@ -105,20 +131,21 @@ test("keeps icon-button selections exact across all mask styles", async ({ baseU
     const buttons = "#ticket-actions button";
     await selectAndSave(page, worker, tabId as number, [`${buttons}:nth-of-type(1) svg`, `${buttons}:nth-of-type(2) svg`], "black", false, 2);
     await selectAndSave(page, worker, tabId as number, [`${buttons}:nth-of-type(3) svg`, `${buttons}:nth-of-type(4) svg`], "white", false, 4);
-    await selectAndSave(page, worker, tabId as number, [`${buttons}:nth-of-type(5) svg`, `${buttons}:nth-of-type(6) svg`], "blur", false, 4);
-    await selectAndSave(page, worker, tabId as number, [`${buttons}:nth-of-type(7) svg`, `${buttons}:nth-of-type(8) svg`], "mosaic", false, 6);
+    await selectAndSave(page, worker, tabId as number, [`${buttons}:nth-of-type(5) svg`, `${buttons}:nth-of-type(6) svg`, `${buttons}:nth-of-type(7) svg`, `${buttons}:nth-of-type(8) svg`], "blur", false, 4);
     await expect(page.locator('.u-cant-see-me-mask-overlay[data-mask-type="black"]')).toHaveCount(2);
     await expect(page.locator('.u-cant-see-me-mask-overlay[data-mask-type="white"]')).toHaveCount(2);
-    await expect(page.locator('.u-cant-see-me-mask-overlay[data-mask-type="mosaic"]')).toHaveCount(2);
     await expect.poll(async () => page.locator(`${buttons}:nth-of-type(5)`).evaluate((element) => (element as HTMLElement).style.filter)).toBe("blur(14px)");
     await expect.poll(async () => page.locator(`${buttons}:nth-of-type(6)`).evaluate((element) => (element as HTMLElement).style.filter)).toBe("blur(14px)");
+    await expect.poll(async () => page.locator(`${buttons}:nth-of-type(7)`).evaluate((element) => (element as HTMLElement).style.filter)).toBe("blur(14px)");
+    await expect.poll(async () => page.locator(`${buttons}:nth-of-type(8)`).evaluate((element) => (element as HTMLElement).style.filter)).toBe("blur(14px)");
 
     await page.reload();
     await expect(page.locator('.u-cant-see-me-mask-overlay[data-mask-type="black"]')).toHaveCount(2);
     await expect(page.locator('.u-cant-see-me-mask-overlay[data-mask-type="white"]')).toHaveCount(2);
-    await expect(page.locator('.u-cant-see-me-mask-overlay[data-mask-type="mosaic"]')).toHaveCount(2);
     await expect.poll(async () => page.locator(`${buttons}:nth-of-type(5)`).evaluate((element) => (element as HTMLElement).style.filter)).toBe("blur(14px)");
     await expect.poll(async () => page.locator(`${buttons}:nth-of-type(6)`).evaluate((element) => (element as HTMLElement).style.filter)).toBe("blur(14px)");
+    await expect.poll(async () => page.locator(`${buttons}:nth-of-type(7)`).evaluate((element) => (element as HTMLElement).style.filter)).toBe("blur(14px)");
+    await expect.poll(async () => page.locator(`${buttons}:nth-of-type(8)`).evaluate((element) => (element as HTMLElement).style.filter)).toBe("blur(14px)");
 
     const extensionId = new URL(worker.url()).host;
     const popup = await context.newPage();
@@ -360,6 +387,15 @@ test("manages rules and persistent page protection from the options UI", async (
     const options = await context.newPage();
     await options.goto(`chrome-extension://${extensionId}/options.html`);
     await expect(options.locator("#rule-count")).toHaveText("1");
+    await expect(options.locator('.rule-controls select[aria-label^="Mask style for"] option')).toHaveCount(3);
+
+    const popup = await context.newPage();
+    await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+    await page.bringToFront();
+    await popup.evaluate(() => document.querySelector<HTMLButtonElement>("#edit-masks")?.click());
+    await expect(page.locator('.u-cant-see-me-edit-toolbar select[aria-label="Change selected mask style"] option')).toHaveCount(3);
+    await page.keyboard.press("Escape");
+
     await options.getByRole("checkbox", { name: "Enabled" }).uncheck();
     await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(0);
 
@@ -405,13 +441,13 @@ test("handles one hundred stored masks and a synthetic mutation storm", async ({
     await page.goto(`${baseURL}/stress.html`);
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker", { timeout: 10_000 });
     const tabId = await worker.evaluate(async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id);
-    await worker.evaluate(async ({ currentTabId, origin }) => {
+    await worker.evaluate(async ({ currentTabId, origin, schemaVersion }) => {
       await chrome.scripting.executeScript({ target: { tabId: currentTabId }, files: ["content.js"] });
       const fingerprint = { tagName: "div", stableAttributes: {}, classTokens: [], parentTags: [], childCountRange: { min: 0, max: 0 } };
-      const rules = Array.from({ length: 100 }, (_, index) => ({ id: `stress-rule-${index}`, schemaVersion: 1, enabled: true, createdAt: index, updatedAt: index, scope: { kind: "origin", origin }, locator: { primary: { kind: "id", value: `stress-${index}` }, fallbacks: [], fingerprint, confidenceThreshold: 0 }, style: { type: "black" } }));
-      await chrome.storage.local.set({ "u-cant-see-me.rules": { schemaVersion: 1, rules } });
+      const rules = Array.from({ length: 100 }, (_, index) => ({ id: `stress-rule-${index}`, schemaVersion, enabled: true, createdAt: index, updatedAt: index, scope: { kind: "origin", origin }, locator: { primary: { kind: "id", value: `stress-${index}` }, fallbacks: [], fingerprint, confidenceThreshold: 0 }, style: { type: "black" } }));
+      await chrome.storage.local.set({ "u-cant-see-me.rules": { schemaVersion, rules } });
       return chrome.tabs.sendMessage(currentTabId, { type: "RULES_CHANGED" });
-    }, { currentTabId: tabId as number, origin: new URL(baseURL).origin });
+    }, { currentTabId: tabId as number, origin: new URL(baseURL).origin, schemaVersion: CURRENT_SCHEMA_VERSION });
     await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(100);
     await page.evaluate(() => (window as Window & { runStressMutations: () => void }).runStressMutations());
     await expect(page.locator(".u-cant-see-me-mask-overlay")).toHaveCount(100);
@@ -437,7 +473,7 @@ async function selectAndSave(
   worker: import("@playwright/test").Worker,
   tabId: number,
   selectors: string[],
-  style: "black" | "white" | "blur" | "mosaic",
+  style: "black" | "white" | "blur",
   alreadyStarted = false,
   expectedMaskCount = selectors.length,
 ): Promise<void> {
@@ -449,6 +485,7 @@ async function selectAndSave(
     expect(response).toMatchObject({ ok: true, data: true });
   }
   await expect(page.locator("[data-u-cant-see-me-ui]")).toBeAttached();
+  await expect(page.locator('select[aria-label="Mask style"] option')).toHaveCount(3);
 
   for (const [index, selector] of selectors.entries()) {
     await page.locator(selector).click({ modifiers: index === 0 ? [] : ["Shift"] });

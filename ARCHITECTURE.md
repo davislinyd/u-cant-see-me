@@ -41,7 +41,7 @@ The Phase 1 renderer chain is ordered as:
 2. Safe CSS/filter renderer.
 3. Event-driven portal renderer.
 
-The contract is isolated in `src/content/renderer/`. The pseudo renderer covers suitable non-static, non-inline HTML elements, the filter renderer applies blur directly to the target element, and the portal renderer places opaque black, white, blur, or decorative mosaic shields in the extension-owned Shadow DOM. Portal positioning is driven by scroll/resize/`ResizeObserver` events with frame batching, not a permanent 60 FPS loop. The renderer is visual only; it does not remove or encrypt page content.
+The contract is isolated in `src/content/renderer/`. The pseudo renderer covers suitable non-static, non-inline HTML elements, the filter renderer applies blur directly to the target element, and the portal renderer places black, white, or blur shields in the extension-owned Shadow DOM. Portal positioning is driven by scroll/resize/`ResizeObserver` events with frame batching, not a permanent 60 FPS loop. The renderer is visual only; it does not remove or encrypt page content.
 
 ## Route and mutation observation
 
@@ -69,4 +69,4 @@ Context-menu actions rely on an already-running content script to retain the loc
 
 Hostile synthetic-page regressions remove the pseudo renderer style, remove the extension root, and generate 1,000 mutations. A renderer reports itself unhealthy if its style/overlay disappears; generic recovery retries the affected rule against the document only after the existing mask becomes unhealthy, avoiding whole-document scans for ordinary mutation batches. A 100-rule regression verifies that the renderer and batched mutation path retain all masks.
 
-The production build is automated against Playwright Chromium. Brave and Edge consume the same MV3 build and remain release-environment manual checks. Live Brave validation has covered a reload plus two targets for each black, white, blur, and mosaic style; Edge remains pending. Same-origin iframes, cross-origin iframes, sandboxed frames, and closed shadow roots are documented limitations; browser zoom and renderer geometry are covered by the portal's event-driven geometry model and synthetic resize regression, not a claim of universal layout support.
+The production build is automated against Playwright Chromium. Brave and Edge consume the same MV3 build and remain release-environment manual checks. Live Brave validation previously covered reload and multiple targets for each supported style; Edge remains pending. Same-origin iframes, cross-origin iframes, sandboxed frames, and closed shadow roots are documented limitations; browser zoom and renderer geometry are covered by the portal's event-driven geometry model and synthetic resize regression, not a claim of universal layout support.

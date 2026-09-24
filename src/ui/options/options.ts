@@ -1,4 +1,5 @@
 import "./options.css";
+import { CURRENT_SCHEMA_VERSION } from "../../shared/constants";
 import { resolveLanguage, translate, type Language, type MessageKey } from "../../shared/i18n";
 import { RuleStore } from "../../storage/rule-store";
 import { SettingsStore } from "../../storage/settings-store";
@@ -81,15 +82,12 @@ function createRuleItem(rule: MaskRule): HTMLLIElement {
   controls.className = "rule-controls";
 
   const enabled = checkbox(t("options.rule.enabled"), rule.enabled, async (checked) => saveRule({ ...rule, enabled: checked, updatedAt: Date.now() }));
-  const style = select(["black", "white", "blur", "mosaic"], rule.style.type, async (value) => {
+  const style = select(["black", "white", "blur"], rule.style.type, async (value) => {
     await saveRule({ ...rule, style: { ...rule.style, type: value as MaskType }, updatedAt: Date.now() });
   });
   style.setAttribute("aria-label", t("options.rule.maskStyleAria", { id: rule.id }));
   const blurRadius = numberInput(t("options.rule.blurRadius"), rule.style.blurRadius ?? 14, async (value) => {
     await saveRule({ ...rule, style: { ...rule.style, blurRadius: value }, updatedAt: Date.now() });
-  });
-  const mosaicSize = numberInput(t("options.rule.mosaicSize"), rule.style.mosaicSize ?? 12, async (value) => {
-    await saveRule({ ...rule, style: { ...rule.style, mosaicSize: value }, updatedAt: Date.now() });
   });
   const scopeKind = select(["exact-url", "origin", "path-pattern"], rule.scope.kind, async () => undefined);
   scopeKind.setAttribute("aria-label", t("options.rule.scopeKindAria", { id: rule.id }));
@@ -118,7 +116,7 @@ function createRuleItem(rule: MaskRule): HTMLLIElement {
   const duplicateButton = button(t("options.rule.duplicate"), () => void duplicateRule(rule));
   const deleteButton = button(t("options.rule.delete"), () => void deleteRule(rule));
   deleteButton.classList.add("danger-button");
-  controls.append(enabled, style, blurRadius, mosaicSize, scopeKind, scopeValue, testButton, duplicateButton, deleteButton);
+  controls.append(enabled, style, blurRadius, scopeKind, scopeValue, testButton, duplicateButton, deleteButton);
   item.append(title, metadata, controls);
   return item;
 }
@@ -214,7 +212,7 @@ async function loadDiagnostics(): Promise<void> {
 
 async function exportConfiguration(): Promise<void> {
   const [storedRules, settings] = await Promise.all([ruleStore.list(), settingsStore.get()]);
-  const blob = new Blob([JSON.stringify({ schemaVersion: 1, rules: storedRules, settings }, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ schemaVersion: CURRENT_SCHEMA_VERSION, rules: storedRules, settings }, null, 2)], { type: "application/json" });
   const anchor = document.createElement("a");
   anchor.href = URL.createObjectURL(blob);
   anchor.download = "u-cant-see-me-config.json";

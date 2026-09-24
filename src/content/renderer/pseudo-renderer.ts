@@ -33,13 +33,10 @@ export class PseudoRenderer implements MaskRenderer {
     const previousType = element.getAttribute("data-u-cant-see-me-mask-type");
     const previousBlur = htmlElement.style.getPropertyValue("--u-cant-see-me-blur");
     const previousBlurPriority = htmlElement.style.getPropertyPriority("--u-cant-see-me-blur");
-    const previousMosaic = htmlElement.style.getPropertyValue("--u-cant-see-me-mosaic");
-    const previousMosaicPriority = htmlElement.style.getPropertyPriority("--u-cant-see-me-mosaic");
 
     element.setAttribute("data-u-cant-see-me-renderer", this.id);
     element.setAttribute("data-u-cant-see-me-mask-type", style.type);
     htmlElement.style.setProperty("--u-cant-see-me-blur", `${style.blurRadius ?? 14}px`);
-    htmlElement.style.setProperty("--u-cant-see-me-mosaic", `${style.mosaicSize ?? 12}px`);
 
     const activeMask: ActiveMask = {
       ruleId: "pending",
@@ -59,7 +56,6 @@ export class PseudoRenderer implements MaskRenderer {
         restoreAttribute(element, "data-u-cant-see-me-renderer", previousRenderer);
         restoreAttribute(element, "data-u-cant-see-me-mask-type", previousType);
         restoreStyleProperty(htmlElement, "--u-cant-see-me-blur", previousBlur, previousBlurPriority);
-        restoreStyleProperty(htmlElement, "--u-cant-see-me-mosaic", previousMosaic, previousMosaicPriority);
       },
     };
   }
@@ -108,14 +104,6 @@ function ensurePseudoStyles(): void {
       background: rgba(255, 255, 255, 0.18);
       backdrop-filter: blur(var(--u-cant-see-me-blur, 14px));
       -webkit-backdrop-filter: blur(var(--u-cant-see-me-blur, 14px));
-    }
-    [data-u-cant-see-me-renderer="${MASK_RENDERER_IDS.pseudo}"][data-u-cant-see-me-mask-type="mosaic"]::after {
-      background-color: #202020;
-      background-image:
-        linear-gradient(45deg, #f4f4f4 25%, transparent 25%, transparent 75%, #f4f4f4 75%),
-        linear-gradient(45deg, #f4f4f4 25%, transparent 25%, transparent 75%, #f4f4f4 75%);
-      background-position: 0 0, calc(var(--u-cant-see-me-mosaic, 12px) / 2) calc(var(--u-cant-see-me-mosaic, 12px) / 2);
-      background-size: var(--u-cant-see-me-mosaic, 12px) var(--u-cant-see-me-mosaic, 12px);
     }
   `;
   (document.head ?? document.documentElement).append(style);

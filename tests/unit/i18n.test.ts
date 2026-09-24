@@ -28,7 +28,7 @@ describe("i18n", () => {
   });
 
   it("keeps product terms in English across languages", () => {
-    const productTerms = ["Gmail", "Strict Mask", "Blur", "Mosaic", "URL", "locator"];
+    const productTerms = ["Gmail", "Strict Mask", "Blur", "URL", "locator"];
     for (const term of productTerms) {
       const zhValues = Object.values(MESSAGES["zh-Hant"]).join("\n");
       expect(zhValues).toContain(term);

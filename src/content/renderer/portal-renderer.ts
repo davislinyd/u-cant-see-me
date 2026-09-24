@@ -19,7 +19,6 @@ export class PortalRenderer implements MaskRenderer {
     overlay.className = "u-cant-see-me-mask-overlay";
     overlay.dataset.maskType = style.type;
     overlay.style.setProperty("--u-cant-see-me-blur", `${style.blurRadius ?? 14}px`);
-    overlay.style.setProperty("--u-cant-see-me-mosaic", `${style.mosaicSize ?? 12}px`);
     overlay.setAttribute("aria-hidden", "true");
     shadowRoot.append(overlay);
 
@@ -97,14 +96,6 @@ function ensurePortalStyles(shadowRoot: ShadowRoot): void {
       background: rgba(255, 255, 255, 0.18);
       backdrop-filter: blur(var(--u-cant-see-me-blur, 14px));
       -webkit-backdrop-filter: blur(var(--u-cant-see-me-blur, 14px));
-    }
-    .u-cant-see-me-mask-overlay[data-mask-type="mosaic"] {
-      background-color: #202020;
-      background-image:
-        linear-gradient(45deg, #f4f4f4 25%, transparent 25%, transparent 75%, #f4f4f4 75%),
-        linear-gradient(45deg, #f4f4f4 25%, transparent 25%, transparent 75%, #f4f4f4 75%);
-      background-position: 0 0, calc(var(--u-cant-see-me-mosaic, 12px) / 2) calc(var(--u-cant-see-me-mosaic, 12px) / 2);
-      background-size: var(--u-cant-see-me-mosaic, 12px) var(--u-cant-see-me-mosaic, 12px);
     }
   `;
   shadowRoot.append(style);

@@ -69,7 +69,7 @@ export class RuleEditController {
     toolbar.innerHTML = `<strong>Edit masks</strong><span data-selection>Select a masked area</span>`;
     const style = document.createElement("select");
     style.setAttribute("aria-label", "Change selected mask style");
-    for (const value of ["black", "white", "blur", "mosaic"] as const) style.append(new Option(value, value));
+    for (const value of ["black", "white", "blur"] as const) style.append(new Option(value, value));
     style.addEventListener("change", () => {
       if (this.selectedRuleId) void this.updateStyle(this.selectedRuleId, { type: style.value as MaskType });
     });

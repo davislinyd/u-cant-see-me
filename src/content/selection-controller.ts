@@ -160,7 +160,7 @@ export class SelectionController {
     styleLabel.textContent = "Mask style";
     const styleSelect = document.createElement("select");
     styleSelect.setAttribute("aria-label", "Mask style");
-    for (const type of ["black", "white", "blur", "mosaic"] as const) {
+    for (const type of ["black", "white", "blur"] as const) {
       const option = document.createElement("option");
       option.value = type;
       option.textContent = type.charAt(0).toUpperCase() + type.slice(1);

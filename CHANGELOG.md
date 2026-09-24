@@ -7,6 +7,7 @@
 
 ## Unreleased
 
+- Removed Mosaic masks. Existing and imported Mosaic rules migrate to Black, and configuration schema v2 drops Mosaic size fields.
 - Added local generic masking, resilient locators, document-start privacy gate, temporary reveal/relock, print protection, and strict masking.
 - Added Gmail thread/message/list masking with synthetic fixture coverage and fail-closed compatibility guard.
 - Added rule management, import/export, edit mode, context menu actions, keyboard commands, hold-to-reveal, and badge status.

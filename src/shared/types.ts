@@ -1,9 +1,8 @@
-export type MaskType = "black" | "white" | "blur" | "mosaic";
+export type MaskType = "black" | "white" | "blur";
 
 export interface MaskStyle {
   type: MaskType;
   blurRadius?: number;
-  mosaicSize?: number;
 }
 
 export type LocatorStrategy =
@@ -94,7 +93,6 @@ export interface ExtensionSettings {
   protectionEnabled: boolean;
   defaultMaskStyle: MaskStyle;
   blurStrength: number;
-  mosaicSize: number;
   strictMask: boolean;
   privacyMode: PrivacyMode;
   relockOnNavigation: boolean;
