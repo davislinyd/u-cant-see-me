@@ -20,6 +20,14 @@ function emitExtensionManifest(): Plugin {
         fileName: "manifest.json",
         source: `${JSON.stringify(manifest, null, 2)}\n`,
       });
+      for (const size of [16, 32, 48, 128] as const) {
+        const fileName = `icons/icon${size}.png`;
+        this.emitFile({
+          type: "asset",
+          fileName,
+          source: readFileSync(resolve(projectRoot, fileName)),
+        });
+      }
 
     },
     writeBundle(options) {

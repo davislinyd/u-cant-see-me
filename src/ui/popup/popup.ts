@@ -40,7 +40,6 @@ const manageButton = document.querySelector<HTMLButtonElement>("#manage-masks");
 const gmailProtection = document.querySelector<HTMLElement>("#gmail-protection");
 const protectGmailButton = document.querySelector<HTMLButtonElement>("#protect-gmail");
 const editButton = document.querySelector<HTMLButtonElement>("#edit-masks");
-const settingsButton = document.querySelector<HTMLButtonElement>("#open-settings");
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -206,10 +205,6 @@ revealButton?.addEventListener("click", async () => {
 });
 
 manageButton?.addEventListener("click", () => {
-  void chrome.runtime.openOptionsPage();
-});
-
-settingsButton?.addEventListener("click", () => {
   void chrome.runtime.openOptionsPage();
 });
 

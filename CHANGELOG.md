@@ -7,6 +7,8 @@
 
 ## Unreleased
 
+- Combined popup mask management and settings into one Options button.
+- Set the extension icon to the supplied hand-gesture illustration, with 16, 32, 48, and 128 pixel assets.
 - Removed Mosaic masks. Existing and imported Mosaic rules migrate to Black, and configuration schema v2 drops Mosaic size fields.
 - Added local generic masking, resilient locators, document-start privacy gate, temporary reveal/relock, print protection, and strict masking.
 - Added Gmail thread/message/list masking with synthetic fixture coverage and fail-closed compatibility guard.

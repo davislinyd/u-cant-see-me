@@ -22,6 +22,15 @@ test("loads the unpacked MV3 extension and its extension pages", async ({ baseUR
 
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent("serviceworker", { timeout: 10_000 });
     const extensionId = new URL(worker.url()).host;
+    const manifest = JSON.parse(await readFile(resolve(extensionPath, "manifest.json"), "utf8")) as {
+      icons: Record<string, string>;
+      action: { default_icon: Record<string, string> };
+    };
+    expect(manifest.action.default_icon).toEqual(manifest.icons);
+    for (const [size, path] of Object.entries(manifest.icons)) {
+      const icon = await readFile(resolve(extensionPath, path));
+      expect(icon.readUInt32BE(16)).toBe(Number(size));
+    }
 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
@@ -33,6 +42,17 @@ test("loads the unpacked MV3 extension and its extension pages", async ({ baseUR
     await options.goto(`chrome-extension://${extensionId}/options.html`);
     await expect(options.locator("h1")).toHaveText("Manage masks");
     await expect(options.locator('#rule-filters select[name="style"] option')).toHaveCount(4);
+
+    await expect(popup.locator("#manage-masks")).toHaveText("Manage masks & settings");
+    await expect(popup.locator("#open-settings")).toHaveCount(0);
+    await options.close();
+    const optionsTabPromise = context.waitForEvent("page");
+    await popup.locator("#manage-masks").click();
+    const optionsTab = await optionsTabPromise;
+    await optionsTab.waitForLoadState("domcontentloaded");
+    await expect(optionsTab).toHaveURL(`chrome-extension://${extensionId}/options.html`);
+    await expect(optionsTab.locator("#privacy-mode")).toBeVisible();
+    await expect(optionsTab.locator("#rule-filters")).toBeVisible();
   } finally {
     await context.close();
     await rm(extensionPath, { recursive: true, force: true });

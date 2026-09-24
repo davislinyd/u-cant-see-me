@@ -4,6 +4,12 @@
   "version": "0.2.0",
   "description": "Local visual privacy protection for browser-rendered content.",
   "minimum_chrome_version": "120",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": [
     "storage",
     "scripting",
@@ -20,7 +26,13 @@
   },
   "action": {
     "default_title": "U Cant See Me",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "commands": {
     "start-selection": {
