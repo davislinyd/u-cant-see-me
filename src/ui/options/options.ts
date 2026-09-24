@@ -93,20 +93,19 @@ function createRuleItem(rule: MaskRule): HTMLLIElement {
   });
   const scopeKind = select(["exact-url", "origin", "path-pattern"], rule.scope.kind, async () => undefined);
   scopeKind.setAttribute("aria-label", t("options.rule.scopeKindAria", { id: rule.id }));
-  const scopeValue = document.createElement("input");
-  scopeValue.value = scopeToValue(rule.scope);
+  const scopeText = scopeToValue(rule.scope);
+  const safeHref = safeHttpUrl(scopeText);
+  const scopeValue = document.createElement(safeHref ? "a" : "span");
+  scopeValue.className = "rule-url";
+  scopeValue.textContent = scopeText;
   scopeValue.setAttribute("aria-label", t("options.rule.scopeValueAria", { id: rule.id }));
-  scopeValue.addEventListener("change", () => {
-    const scope = parseScope(scopeKind.value, scopeValue.value);
-    if (!scope) {
-      showFeedback(t("options.feedback.invalidScope"));
-      scopeValue.value = scopeToValue(rule.scope);
-      return;
-    }
-    void saveRule({ ...rule, scope, updatedAt: Date.now() });
-  });
+  if (safeHref && scopeValue instanceof HTMLAnchorElement) {
+    scopeValue.href = safeHref;
+    scopeValue.target = "_blank";
+    scopeValue.rel = "noopener noreferrer";
+  }
   scopeKind.addEventListener("change", () => {
-    const scope = parseScope(scopeKind.value, scopeValue.value);
+    const scope = parseScope(scopeKind.value, scopeValue.textContent ?? "");
     if (!scope) {
       showFeedback(t("options.feedback.scopeNeedsValue"));
       scopeKind.value = rule.scope.kind;
@@ -271,6 +270,15 @@ function parseScope(kind: string, value: string): SiteScope | null {
     return null;
   }
   return null;
+}
+
+function safeHttpUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
 }
 
 function scopeToValue(scope: SiteScope): string {

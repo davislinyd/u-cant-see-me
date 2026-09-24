@@ -26,17 +26,6 @@
         <label class="setting-row" for="strict-mask"><span data-i18n="options.strictMask">Strict Mask blocks pointer interaction and copy inside masked targets</span><input id="strict-mask" type="checkbox" /></label>
         <p class="shortcut-note" data-i18n="options.shortcutNote">Shortcuts: Alt+Shift+S select, Alt+Shift+V reveal, Alt+Shift+L remask. Hold Alt+Shift+H on a protected page to reveal only while held. Chromium lets you customize command shortcuts in its extension shortcut UI.</p>
       </section>
-      <section class="backup-card">
-        <h2 data-i18n="options.backup">Backup</h2>
-        <p data-i18n="options.backupNote">Exports can contain URLs, structural attributes, Gmail thread/message identifiers, and settings. Temporary reveal state is never exported.</p>
-        <button id="export-config" type="button" data-i18n="options.exportConfig">Export configuration</button>
-        <label class="import-button"><span data-i18n="options.importConfig">Import configuration</span><input id="import-config" type="file" accept="application/json,.json" /></label>
-      </section>
-      <section class="diagnostics-card">
-        <div class="section-heading"><h2 data-i18n="options.diagnostics">Developer diagnostics</h2><button id="load-diagnostics" type="button" data-i18n="options.inspectPage">Inspect current page</button></div>
-        <p data-i18n="options.diagnosticsNote">Shows structural IDs and surface availability only; never email or page text.</p>
-        <pre id="diagnostics-output" hidden></pre>
-      </section>
       <section>
         <div class="section-heading"><h2 data-i18n="options.rules">Rules</h2><button id="refresh-status" type="button" data-i18n="options.testCurrentPage">Test current page</button></div>
         <form id="rule-filters" class="rule-filters">
@@ -49,6 +38,17 @@
         </form>
         <p id="empty-state" class="empty-state" data-i18n="options.emptyState">No mask rules stored yet.</p>
         <ul id="rule-list" class="rule-list"></ul>
+      </section>
+      <section class="backup-card">
+        <h2 data-i18n="options.backup">Backup</h2>
+        <p data-i18n="options.backupNote">Exports can contain URLs, structural attributes, Gmail thread/message identifiers, and settings. Temporary reveal state is never exported.</p>
+        <button id="export-config" type="button" data-i18n="options.exportConfig">Export configuration</button>
+        <label class="import-button"><span data-i18n="options.importConfig">Import configuration</span><input id="import-config" type="file" accept="application/json,.json" /></label>
+      </section>
+      <section class="diagnostics-card">
+        <div class="section-heading"><h2 data-i18n="options.diagnostics">Developer diagnostics</h2><button id="load-diagnostics" type="button" data-i18n="options.inspectPage">Inspect current page</button></div>
+        <p data-i18n="options.diagnosticsNote">Shows structural IDs and surface availability only; never email or page text.</p>
+        <pre id="diagnostics-output" hidden></pre>
       </section>
       <p id="feedback" class="feedback" role="status"></p>
     </main>
